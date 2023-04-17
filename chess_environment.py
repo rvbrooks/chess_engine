@@ -1,28 +1,28 @@
+"""
+This is the script where the board environment object is defined, and the rules
+not related to the movement of the pieces are defined.
+
+"""
+
 import numpy as np
 import random
 import time
-import copy # we need to use deepcopy for copying custom objects with nested iterables.
+import copy  # we need to use deepcopy for copying custom objects with nested iterables.
+from chess_pieces import *
 
 random.seed(400)
-
-# How to organise board object?
-# A board which contains Piece objects?
 
 # 1. Get board visualisation working
 # 2. Get board updating working
 # 3. Get pieces to choose from moves and take allowed moves
-# 4. Make special moves like en Peasant, castling and queening working
-# 5. Make it play a totally random game of random moves.
+
 
 file = ["a", "b", "c", "d", "e", "f", "g", "h"]
 rank = [1, 2, 3, 4, 5, 6, 7, 8]
 file_dict = {file[i]: rank[i] for i in range(len(rank))}
 file_dict_inv = {rank[i]: file[i] for i in range(len(rank))}
 board = [(i, j) for i in file for j in rank]
-
-
-# class Board, and a plot_board method.
-# need board class to check where other pieces are?
+castle_rank = {0: 1, 1: 8}  # rank each side castles on.
 
 
 class ChessBoard:
@@ -38,6 +38,7 @@ class ChessBoard:
         self.game_result = None
 
     def play_game(self, n_turns=5, perspective=0, wait=0.5):
+        # TODO: make this a while loop until game finished.
         self.perspective = perspective
         for i in range(n_turns):
             if self.game_end is False:
@@ -64,13 +65,12 @@ class ChessBoard:
         allowed_moves = self.get_all_allowed_moves(self.board, self.current_player)
 
         legal = False
-
-        while legal is False:
+        while not legal:
 
             test_move = random.choice(allowed_moves)
             print(test_move)
             legal = self.try_update_board(test_move[0], test_move[1], self.current_player)
-            if legal is False: # if the move was illegal, remove it from candidates
+            if legal is False:  # if the move was illegal, remove it from candidates
                 allowed_moves.remove(test_move)
             if len(allowed_moves) == 0:
                 self.game_end = True
@@ -86,12 +86,11 @@ class ChessBoard:
             piece = self.board[test_move[0]]["piece"]
             self.move_log[self.turn] = [self.current_player, piece.label, test_move[0], test_move[1]]
             self.update_board(test_move[0], test_move[1])
-            piece.n_moves += 1
             self.board = self.update_board_control(self.board)
             self.turn += 1
 
         self.print_board()
-        #self.print_board_control()
+        # self.print_board_control()
 
     def check_game_finished(self):
         """
@@ -209,13 +208,20 @@ class ChessBoard:
 
     def update_board(self, start_square, end_square):
         # move the piece
-        if self.board[end_square]["piece"].label != "O":
-            self.graveyard.append(self.board[end_square]["piece"])
-        square_info = self.board[start_square].copy()
-        square_info["piece"].position = end_square
+        if start_square not in ["O-O", "O-O-O"]
+            if self.board[end_square]["piece"].label != "O":
+                self.graveyard.append(self.board[end_square]["piece"])
+            square_info = self.board[start_square].copy()
+            square_info["piece"].position = end_square
 
-        self.board[start_square] = {"piece": Piece(color=None), "control": None}
-        self.board[end_square] = square_info
+            self.board[start_square] = {"piece": Piece(color=None), "control": None}
+            self.board[end_square] = square_info
+            self.board[end_square]["piece"].n_moves += 1
+
+        elif start_square == "O-O" or start_square == "O-O-O":
+            pass
+            # Implement castling rules!
+
         # reassess the square control of the board
 
     def try_update_board(self, start_square, end_square, current_player):
@@ -271,235 +277,54 @@ class ChessBoard:
             elif board[b]["control"] == 0:
                 board[b]["control"] = 2
 
-        return(board)
+        return (board)
 
     def get_all_allowed_moves(self, board, current_player):
         moves = []
+        enemy_player = abs(1 - current_player)
+
         for square in board:
             piece = board[square]["piece"]
             if piece.label != "O" and piece.color == current_player:
                 possible_moves, _ = piece.get_possible_moves(board, current_player)
                 for m in possible_moves:
                     moves.append((square, m))
+
+        # conditions to be met to allow kingside castling
+        r = castle_rank[current_player]
+        kingside = [board[("e", r)]["piece"].label == "K",  # king is on starting square
+                    board[("e", r)]["piece"].n_moves == 0,  # king hasn't moved
+                    board[("h", r)]["piece"].label == "R",  # rook on starting square
+                    board[("h", r)]["piece"].n_moves == 0,  # rook hasn't moved
+                    board[("e", r)]["control"] not in [enemy_player, 2],  # king not in check
+                    board[("f", r)]["control"] not in [enemy_player, 2],  # f1 not in check
+                    board[("g", r)]["control"] not in [enemy_player, 2],  # g1 not in check
+                    board[("f", r)]["piece"].label == "O",  # f1 clear of any pieces
+                    board[("g", r)]["piece"].label == "O",  # g1 clear of any pieces
+                    ]
+        # conditions to be met to allow queenside castling
+        queenside = [board[("e", r)]["piece"].label == "K",  # king is on starting square
+                     board[("e", r)]["piece"].n_moves == 0,  # king hasn't moved
+                     board[("a", r)]["piece"].label == "R",  # rook on starting square
+                     board[("a", r)]["piece"].n_moves == 0,  # rook hasn't moved
+                     board[("e", r)]["control"] not in [enemy_player, 2],  # king not in check
+                     board[("d", r)]["control"] not in [enemy_player, 2],  # d1 not in check
+                     board[("c", r)]["control"] not in [enemy_player, 2],  # c1 not in check
+                     board[("b", r)]["control"] not in [enemy_player, 2],  # b1 not in check
+                     board[("d", r)]["piece"].label == "O",  # d1 clear of any pieces
+                     board[("c", r)]["piece"].label == "O",  # c1 clear of any pieces
+                     board[("b", r)]["piece"].label == "O",  # b1 clear of any pieces
+                     ]
+
+        # If all conditions for kingside castling are met:
+        if all(kingside):
+            moves.append(("O-O", "O-O"))
+
+        # If all conditions for queenside castling are met:
+        if all(queenside):
+            moves.append("O-O-O", "O-O-O")
+
         return (moves)
-
-
-class Piece():
-    def __init__(self, color=0, value=0, position=(0, 0)):
-        self.value = value
-        self.position = position
-        self.color = color
-        self.n_moves = 0
-        self.label = "O"
-
-    def __repr__(self):
-        return (self.label)
-
-    def get_label(self):
-        return (self.label)
-
-    def get_current_position(self):
-        return (self.position)
-
-
-    def get_possible_moves(self, board_state, current_player):
-        """This is the possible moves that could be made given the type of piece
-           but not yet accounting for if the space is occupied or not.  """
-
-        possible_moves = []
-        control = []
-
-        return (possible_moves, control)
-
-
-class King(Piece):
-    def __init__(self, color=0, value=1000000, position=("d", 1)):
-        Piece.__init__(self, color, value, position)
-        self.in_check = False
-        self.label = "K"
-
-    def get_possible_moves(self, board_state, current_player):
-        ff = file_dict[self.position[0]]
-        rr = self.position[1]
-        possible_moves = []
-        control = []
-        i = 1
-        moves_ = [(ff + i, rr + i), (ff - i, rr + i), (ff + i, rr - i), (ff - i, rr - i), (ff + i, rr), (ff - i, rr),
-                  (ff, rr + i), (ff, rr - i)]  # define the possible moves for a castle
-        for j, k in enumerate(moves_):
-            if k[0] in rank and k[1] in rank:  # check the moves are on the board
-                position = (file_dict_inv[k[0]], k[1])
-                control.append(position)
-
-                if board_state[position]["piece"].color == current_player:
-                    pass
-                else:
-                    possible_moves.append(position)
-
-        return (possible_moves, control)
-
-
-class Queen(Piece):
-    def __init__(self, color=0, value=9., position=("e", 1)):
-        Piece.__init__(self, color, value, position)
-        self.label = "Q"
-
-    def get_possible_moves(self, board_state, current_player):
-        ff = file_dict[self.position[0]]
-        rr = self.position[1]
-        possible_moves = []
-        control = []
-        i = 1
-        done_flags = [False] * 8
-        while i < 8:  # circle outwards one move at a time, incremnting i
-            moves_ = [(ff + i, rr + i), (ff - i, rr + i), (ff + i, rr - i), (ff - i, rr - i), (ff + i, rr),
-                      (ff - i, rr), (ff, rr + i), (ff, rr - i)]  # define the possible moves for a castle
-            for j, k in enumerate(moves_):
-                if k[0] in rank and k[1] in rank and done_flags[j] == False:  # check the moves are on the board
-                    position = (file_dict_inv[k[0]], k[1])
-                    control.append(position)
-                    if board_state[position]["piece"].color == None:  # check if the moves end on a free square
-                        possible_moves.append(position)
-                    elif board_state[position][
-                        "piece"].color == current_player:  # if the move hits my own piece, stop going that way
-                        done_flags[j] = True
-                    else:  # if the move hits an enemy piece, stop going that way but include the enemy square.
-                        possible_moves.append(position)  #
-                        done_flags[j] = True
-            i += 1
-        return (possible_moves, control)
-
-
-class Pawn(Piece):
-    def __init__(self, color=0, value=1, position=("b", 2)):
-        Piece.__init__(self, color, value, position)
-        self.label = "P"
-        self.moves_made = 0
-
-    def get_possible_moves(self, board_state, current_player, en_passant=False):
-        enemy_player = abs(1 - current_player)
-        ff = file_dict[self.position[0]]
-        rr = self.position[1]
-        possible_moves = []
-        control = []
-        # Set direction of pawn travel
-        if current_player == 0:
-            s = 1
-        elif current_player == 1:  # change direction of the pawns if black
-            s = -1
-        else:
-            s = 0
-            print("Current player specified incorrectly.")
-        # Allow pawn to jump forward 2 if hasn't moved
-        attack_moves = [(ff + 1, rr + 1 * s), (ff - 1, rr + 1 * s)]
-        moves = [(ff, rr + 1 * s)]
-        if self.n_moves == 0:
-            moves.append((ff, rr + 2 * s))
-        # somewhere add in an en passant rule
-
-        for position in attack_moves:
-            if position[0] in rank and position[1] in rank:
-                position = (file_dict_inv[position[0]], position[1])
-                control.append(position)
-                if board_state[position]["piece"].color == enemy_player:  # only allow attack if piece is an enemy
-                    possible_moves.append(position)
-
-        done_flag = False
-        for position in moves:
-            if position[0] in rank and position[1] in rank:
-                position = (file_dict_inv[position[0]], position[1])
-                if board_state[position]["piece"].label == "O" and done_flag == False:
-                    possible_moves.append(position)
-                else:
-                    done_flag = True
-
-        return (possible_moves, control)
-
-
-class Bishop(Piece):
-    def __init__(self, color=0, value=3, position=("b", 2)):
-        Piece.__init__(self, color, value, position)
-        self.label = "B"
-
-    def get_possible_moves(self, board_state, current_player):
-        ff = file_dict[self.position[0]]
-        rr = self.position[1]
-        possible_moves = []
-        control = []
-        i = 1
-        done_flags = [False] * 4
-        while i < 8:  # circle outwards one move at a time, incremnting i
-            moves_ = [(ff + i, rr + i), (ff - i, rr + i), (ff + i, rr - i),
-                      (ff - i, rr - i)]  # define the possible moves for a castle
-            for j, k in enumerate(moves_):
-                if k[0] in rank and k[1] in rank and done_flags[j] == False:  # check the moves are on the board
-                    position = (file_dict_inv[k[0]], k[1])
-                    control.append(position)
-
-                    if board_state[position]["piece"].color == None:  # check if the moves end on a free square
-                        possible_moves.append(position)
-                    elif board_state[position][
-                        "piece"].color == current_player:  # if the move hits my own piece, stop going that way
-                        done_flags[j] = True
-                    else:  # if the move hits an enemy piece, stop going that way but include the enemy square.
-                        possible_moves.append(position)  #
-                        done_flags[j] = True
-            i += 1
-        return (possible_moves, control)
-
-
-class Knight(Piece):
-    def __init__(self, color=0, value=3, position=("b", 2)):
-        Piece.__init__(self, color, value, position)
-        self.label = "N"
-
-    def get_possible_moves(self, board_state, current_player):
-        ff = file_dict[self.position[0]]
-        rr = self.position[1]
-        possible_moves = []
-        control = []
-        moves_ = [(ff + 1, rr + 2), (ff + 2, rr + 1), (ff - 2, rr - 1), (ff - 1, rr - 2), (ff + 1, rr - 2),
-                  (ff - 2, rr + 1), (ff + 2, rr - 1), (ff - 1, rr + 2)]  # define the possible moves for a castle
-
-        for j, k in enumerate(moves_):
-            if k[0] in rank and k[1] in rank:
-                position = (file_dict_inv[k[0]], k[1])
-                control.append(position)
-                if board_state[position]["piece"].color == current_player:
-                    pass
-                else:
-                    possible_moves.append(position)
-
-        return (possible_moves, control)
-
-
-class Rook(Piece):
-    def __init__(self, color=0, value=5, position=("b", 2)):
-        Piece.__init__(self, color, value, position)
-        self.label = "R"
-
-    def get_possible_moves(self, board_state, current_player):
-        ff = file_dict[self.position[0]]
-        rr = self.position[1]
-        possible_moves = []
-        control = []
-        i = 1
-        done_flags = [False] * 4
-        while i < 8:  # circle outwards one move at a time, incremnting i
-            moves_ = [(ff + i, rr), (ff - i, rr), (ff, rr + i), (ff, rr - i)]  # define the possible moves for a castle
-            for j, k in enumerate(moves_):
-                if k[0] in rank and k[1] in rank and done_flags[j] == False:  # check the moves are on the board
-                    position = (file_dict_inv[k[0]], k[1])
-                    control.append(position)
-                    if board_state[position]["piece"].color == None:  # check if the moves end on a free square
-                        possible_moves.append(position)
-                    elif board_state[position]["piece"].color == current_player:  # if the move hits my own piece, stop going that way
-                        done_flags[j] = True
-                    else:  # if the move hits an enemy piece, stop going that way but include the enemy square.
-                        possible_moves.append(position)  #
-                        done_flags[j] = True
-            i += 1
-        return (possible_moves, control)
 
 
 # = King()
@@ -511,29 +336,18 @@ cb.perspective = 0
 cb.print_board_control()
 
 # cb.board
-# cb.update_board(("e", 2), ("e", 4))
-# cb.update_board(("e", 7), ("e", 5))
-# cb.update_board(("g", 1), ("f", 3))
-# cb.update_board(("b", 8), ("c", 6))
-# cb.update_board(("b", 7), ("b", 3))
+cb.update_board(("f", 1), ("f", 5))
+cb.update_board(("g", 1), ("g", 5))
+cb.update_board(("e", 1), ("f", 1))
+cb.update_board(("f", 1), ("e", 1))
+cb.update_board(("h", 1), ("f", 1))
+cb.update_board(("f", 1), ("c", 5))
+cb.update_board(("d", 8), ("g", 2))
+cb.board = cb.update_board_control(cb.board)
 
-# cb.update_board(("d",1), ("d",4))
-# cb.update_board(("e",8), ("e",5))
+cb.print_board()
 
-# m = (cb.board[("d",4)]["piece"].get_possible_moves(cb.board, 0)[1])
-# print(m)
-# print(len(m))
-# cb.print_board()
-# cb.print_board_control()
+a = cb.get_all_allowed_moves(cb.board, 0)
+print(a)
 
-
-cb.play_game(1000, perspective=0, wait=0)
-#print(cb.print_move_log())
-
-#cb.print_board()
-
-#cb.try_update_board(("e",2), ("e",4))
-
-#cb.update_board(("e",2), ("e",4))
-
-#cb.print_board()
+# cb.play_game(1, perspective=0, wait=0)
