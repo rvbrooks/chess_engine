@@ -7,4 +7,6 @@ An ongoing project where I am applying deep reinforcement learning to build my o
 
 I'm a huge fan of chess and have been thinking about writing my own chess engine for a while. Following some work on deep reinforcement learning, I decided to have a go.
 
-For personal interest, I decided to code the rules from scratch (i.e. not using the chess package)
+For personal interest, I decided to code the rules from scratch (i.e. not using an available Python chess package).
+
+
