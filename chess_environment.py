@@ -86,10 +86,8 @@ class ChessBoard:
 
         if self.game_end is False:
             piece = self.board[test_move[0]]["piece"]
-            self.move_log[self.turn] = [self.current_player, piece.label, test_move[0], test_move[1]]
             self.update_board(test_move[0], test_move[1])
             self.board = self.update_board_control(self.board)
-            self.turn += 1
 
         self.print_board()
         self.print_board("control")
@@ -179,6 +177,12 @@ class ChessBoard:
 
     def update_board(self, start_square, end_square):
         """Once a move has been selected, update the board."""
+
+        # update the move log
+        piece = self.board[start_square]["piece"]
+        self.move_log[self.turn] = [self.current_player, piece.label, start_square, end_square]
+
+
         # move the piece
         if end_square not in ["O-O", "O-O-O"]:
             if self.board[end_square]["piece"].label != "O":
@@ -214,6 +218,7 @@ class ChessBoard:
             else:
                 print("Invalid castling?!")
             # Implement castling rules!
+        self.turn += 1
 
         # reassess the square control of the board
 
@@ -297,7 +302,29 @@ class ChessBoard:
                 for m in possible_moves:
                     moves.append((square, m))
 
-        # conditions to be met to allow kingside castling
+        # EN-PASSANT
+        if len(self.move_log) > 2:
+            ml = self.move_log[self.turn-1] # check the last move if it was a double pawn move
+            print(ml[0],ml[1])
+            if ml[1] == "P" and ml[0] == enemy_player:
+                # if opponent pawn's last move was to move 2
+                if abs(ml[2][1]-ml[3][1]) == 2:
+                    f_end, r_end = ml[3]
+                    print(file_dict[f_end])
+                    if file_dict[f_end]-1 in rank:
+                        nf = file_dict_inv[file_dict[f_end]-1]
+                        if board[(nf, r_end)]["piece"].label == "P" and \
+                                board[(nf, r_end)]["piece"].color == current_player:
+                            moves.append(((nf, r_end), "EP_kingside"))
+
+                    if file_dict[f_end]+1 in rank:
+                        nf = file_dict_inv[file_dict[f_end]+1]
+
+                        if board[(nf, r_end)]["piece"].label == "P" and \
+                                board[(nf, r_end)]["piece"].color == current_player:
+                            moves.append(((nf, r_end), "EP_queenside"))
+
+        # CASTLING
         r = castle_rank[current_player]
         kingside = [board[("e", r)]["piece"].label == "K",  # king is on starting square
                     board[("e", r)]["piece"].n_moves == 0,  # king hasn't moved
@@ -379,18 +406,27 @@ cb.print_board()
 cb.perspective = 0
 cb.print_board("control")
 
-# cb.board
-#cb.update_board(("f", 8), ("f", 5))
-#cb.update_board(("g", 8), ("g", 5))
-#cb.update_board(("d", 8), ("d", 5))
-#cb.update_board(("b", 8), ("b", 5))
-#cb.update_board(("c", 8), ("c", 5))
-#cb.update_board(("e",8), "O-O")
+cb.current_player = 0
+cb.update_board(("b", 2), ("b", 4))
+cb.current_player = 1
+cb.update_board(("f", 7), ("f", 5))
+cb.current_player = 0
+cb.update_board(("b", 4), ("b", 5))
+cb.current_player = 1
+cb.update_board(("c", 7), ("c", 5))
+
+
+m = cb.get_all_allowed_moves(cb.board, current_player=0)
+
+print(m)
+
 
 #cb.board = cb.update_board_control(cb.board)
 
-cb.print_board("control")
+cb.print_board()
 
-cb.play_game(500, perspective=0, wait=0)
-print(len(cb.active_pieces))
-print((cb.active_pieces))
+#cb.play_game(5, perspective=0, wait=0)
+
+cb.print_move_log()
+
+#
