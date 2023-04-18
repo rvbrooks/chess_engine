@@ -9,7 +9,7 @@ import time
 import copy  # we need to use deepcopy for copying custom objects with nested iterables.
 from chess_pieces import Piece, King, Queen, Rook, Bishop, Knight, Pawn
 
-random.seed(400)
+random.seed(3) # 3005, 67436: black checkmates white; 3: white checkmates black
 
 # 1. Get board visualisation working
 # 2. Get board updating working
@@ -23,6 +23,7 @@ file_dict_inv = {rank[i]: file[i] for i in range(len(rank))}  # numer:letter
 #board = [(i, j) for i in file for j in rank]
 castle_rank = {0: 1, 1: 8}  # rank each side castles on.
 available_pieces = {"K": King, "Q": Queen, "R": Rook, "B": Bishop, "N": Knight, "P": Pawn}
+color_encoding = {0:"white", 1:"black"}
 
 
 class ChessBoard:
@@ -30,11 +31,11 @@ class ChessBoard:
         self.board = {}
         self.empty_square_info = {"piece": Piece(color=None), "control": None}
         self.active_pieces = []  # pieces currently in action TODO: modify this when queening
+        self.perspective = 0  # perspective used when printing the board.
         self.initialize_board()
         self.turn = 0  # turn counter
         self.graveyard = []  # list containing pieces that were captured.
         self.current_player = 0
-        self.perspective = 0  # perspective used when printing the board.
         self.game_end = False  # flag if game has finished.
         self.move_log = {}  # record of all moves played.
         self.game_result = None  # the result of the game (1: white win, 0.5, draw, -1 black win)
@@ -47,11 +48,11 @@ class ChessBoard:
                 print("white turn " + str(i))
                 time.sleep(wait)
                 self.take_turn()
+            if self.game_end is False:
                 print("black turn " + str(i))
                 time.sleep(wait)
                 self.take_turn()
             else:
-                print("Checkmate?")
                 break
 
     def take_turn(self):
@@ -77,15 +78,12 @@ class ChessBoard:
             if len(allowed_moves) == 0:
                 self.game_end = True
                 print("NO LEGAL MOVES")
-                self.print_board()
-                self.print_board("control")
-                print("^")
+                print("Final board position:")
                 break
 
         self.check_game_finished(allowed_moves)
 
         if self.game_end is False:
-            print(test_move)
             # if not a pawn promotion move:
             if len(test_move[1]) == 2:
                 self.update_board(test_move[0], test_move[1])
@@ -97,66 +95,72 @@ class ChessBoard:
             self.board = self.update_board_control(self.board)
 
         self.print_board()
-        #self.print_board("control")
+        self.print_board("control")
 
     def check_game_finished(self, allowed_moves):
         """
-        Check state of the board for win conditions.
+        Check state of the board for won/lose/draw conditions.
+        1. One side checkmates the other
+        2. Draw if one side traps other king with no moves left but not in check
+        3. Draw if stalemate from only 2 kings left
+        4. Draw if stalemate from only 2 kings and bishop/knight left (insufficient for checkmate)
+        TODO: implement draw by repetition and by 50 moves no captures.
         """
         # stalemate by 2 kings
-        if len(self.graveyard) == 30:
+
+        # Check for checkmate and stalemate.
+        if len(allowed_moves) == 0:
+            enemy_player = abs(1 - self.current_player)
+            for square in self.board:
+                if self.board[square]["piece"].label == "K" and self.board[square]["piece"].color == self.current_player:
+                    if self.board[square]["control"] in [enemy_player, 2]:
+                        print(color_encoding[self.current_player]+" is Checkmated!")
+                        self.game_end = True
+                        if self.current_player == 0:
+                            self.game_result = 1
+                        elif self.current_player == 1:
+                            self.game_result = -1
+                    elif self.board[square]["control"] not in [enemy_player, 2]:
+                        print(color_encoding[self.current_player]+" is Stalemated!")
+                        self.game_end = True
+                        self.game_result = 0.5
+                    else:
+                        print("Something's wrong...")
+
+        elif len(self.graveyard) == 30:
             print("stalemate by 2 kings left")
             self.game_end = True
             self.game_result = 0.5
 
-        # check for white victory
-        if len(allowed_moves) == 0 and self.current_player == 1:
-            for square in self.board:
-                if self.board[square]["piece"].label == "K" and self.board[square]["piece"].color == 1:
-                    if self.board[square]["control"] in [0, 2]:
-                        print("Black is Checkmated!")
-                        self.game_end = True
-                        self.game_result = 1
-                    else:
-                        print("Something's wrong...")
+        elif len(self.graveyard) == 29:
+            for piece in self.active_pieces:
+                if piece.label in ["B", "N"]:
+                    print("stalemate by 2 kings & bishop/knight left")
+                    self.game_end = True
+                    self.game_result = 0.5
 
-        # check for black victory
-        if len(allowed_moves) == 0 and self.current_player == 0:
-            for square in self.board:
-                if self.board[square]["piece"].label == "K" and self.board[square]["piece"].color == 0:
-                    if self.board[square]["control"] in [1, 2]:
-                        print("White is Checkmated!")
+        elif len(self.graveyard) == 28:
+            w, b = [], []
+            for piece in self.active_pieces:
+                if piece.color == 0:
+                    w.append(piece.label)
+                elif piece.color == 1:
+                    b.append(piece.label)
+                if len(w) == len(b):
+                    if "Q" not in [w, b] and "R" not in [w, b]:
+                        print("stalemate by 2 kings & bishop/knight each left")
                         self.game_end = True
-                        self.game_result = -1
-                    else:
-                        print("Something's wrong...")
+                        self.game_result = 0.5
 
-    def initialize_board(self):
-        """Set up the board in the standard chess configuration.
-           TODO: Load setup from a config file to allow custom layouts.
-        """
+    def initialize_board(self, filename="board_config.txt"):
         board_positions = [(i, j) for i in file for j in rank]
         self.board = {k: self.empty_square_info.copy() for k in board_positions}
-        for ff in file:
-            self.board[(ff, 2)]["piece"] = Pawn(color=0, position=(ff, 2))
-            self.board[(ff, 7)]["piece"] = Pawn(color=1, position=(ff, 7))
-
-        self.board[("e", 1)]["piece"] = King(color=0, position=("e", 1))
-        self.board[("d", 1)]["piece"] = Queen(color=0, position=("d", 1))
-        self.board[("e", 8)]["piece"] = King(color=1, position=("e", 8))
-        self.board[("d", 8)]["piece"] = Queen(color=1, position=("d", 8))
-
-        bishops = [[("c", 1), 0], [("f", 1), 0], [("c", 8), 1], [("f", 8), 1]]
-        for i in bishops:
-            self.board[i[0]]["piece"] = Bishop(color=i[1], position=i[0])
-
-        knights = [[("b", 1), 0], [("g", 1), 0], [("b", 8), 1], [("g", 8), 1]]
-        for i in knights:
-            self.board[i[0]]["piece"] = Knight(color=i[1], position=i[0])
-
-        rooks = [[("a", 1), 0], [("h", 1), 0], [("a", 8), 1], [("h", 8), 1]]
-        for i in rooks:
-            self.board[i[0]]["piece"] = Rook(color=i[1], position=i[0])
+        with open(filename, "r") as open_file:
+            for line in open_file:
+                print(line)
+                color, piece, ff, rr = line.split(";")
+                position = (ff, int(rr))
+                self.board[position]["piece"] = available_pieces[piece](color=int(color), position=position)
 
         self.board = self.update_board_control(self.board)
 
@@ -165,12 +169,8 @@ class ChessBoard:
             if piece.label != "O":
                 self.active_pieces.append(piece)
 
-    def load_board(self, file):
-        with open(file, "r") as f:
-            for line in f:
-                print(line.read())
-               # data.split(";")
-                #print(data)
+        self.print_board()
+        self.print_board("control")
 
 
 
@@ -218,6 +218,39 @@ class ChessBoard:
 
         self.turn += 1
 
+    def try_update_board(self, start_square, end_square, current_player, promotion=None):
+        """Instead of updating the main board, make a copy to evaluate - used to see
+           if a move is legal (doesn't put a king in check)
+           FIXME: Need to implement the special rules in the try update!!
+           """
+        # move the piece
+        enemy_player = abs(1 - current_player)
+        temp_board = copy.deepcopy(self.board)
+
+        if end_square not in ["O-O", "O-O-O", "EP_kingside", "EP_queenside"] and promotion is None:
+
+            square_info = temp_board[start_square]
+            square_info["piece"].position = end_square
+            temp_board[start_square] = self.empty_square_info.copy()
+            temp_board[end_square] = square_info
+            temp_board = self.update_board_control(temp_board)
+
+        elif end_square in ["O-O", "O-O-O"]:  # already checked that castling is legal.
+            temp_board = self.perform_castling(temp_board, start_square, end_square)
+
+        elif end_square in ["EP_kingside", "EP_queenside"]:
+            temp_board, captured_square = self.perform_en_passant(temp_board, start_square, end_square)
+
+        elif promotion in ["Q", "R", "B", "N"]:
+            temp_board = self.perform_pawn_promotion(temp_board, start_square, end_square, promotion)
+
+        for square, attributes in temp_board.items():  # check if move has kept / put king in check
+            if attributes["piece"].label == "K" and attributes["piece"].color == current_player:
+                if attributes["control"] in [enemy_player, 2]: # if king in check after this move
+                    allowed = False
+                else:  # if king not in check after this move:
+                    allowed = True
+        return (allowed)
 
     def perform_castling(self, board, start_square, end_square):
         """Update the board according to special castling rules.
@@ -311,37 +344,6 @@ class ChessBoard:
 
         board[end_square]["piece"] = new_piece
         return (board)
-
-    def try_update_board(self, start_square, end_square, current_player):
-        """Instead of updating the main board, make a copy to evaluate - used to see
-           if a move is legal (doesn't put a king in check)
-           FIXME: Need to implement the special rules in the try update!!
-           """
-        # move the piece
-        enemy_player = abs(1 - current_player)
-
-        # Since castling is only allowed if king not in check, by default if
-        # passed to this method as an argument, it is already allowed and would
-        # not result in putting the king in check.
-        if end_square in ["O-O", "O-O-O"]:
-            allowed = True
-
-        else:
-            temp_board = copy.deepcopy(self.board)
-            square_info = temp_board[start_square]
-            square_info["piece"].position = end_square
-
-            temp_board[start_square] = self.empty_square_info.copy()
-            temp_board[end_square] = square_info
-            temp_board = self.update_board_control(temp_board)
-
-            allowed = True
-            for square, attributes in temp_board.items():  # check if move has kept / put king in check
-                if attributes["piece"].label == "K" and attributes["piece"].color == current_player:
-                    if attributes["control"] in [enemy_player, 2]:
-                        allowed = False
-
-        return (allowed)
 
     def get_controlled_squares(self, board, current_player):
         """For a given piece at a given position, return the squares it controls.
@@ -511,16 +513,5 @@ class ChessBoard:
 cb = ChessBoard()
 cb.perspective = 0
 
-cb.print_board()
-cb.print_board("control")
+cb.play_game(500, perspective=0, wait=0)
 
-
-
-
-#cb.play_game(500, perspective=0, wait=0)
-
-# cb.print_move_log()
-
-cb.load_board("board_config.txt")
-
-#
