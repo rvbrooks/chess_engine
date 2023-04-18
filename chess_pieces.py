@@ -12,7 +12,6 @@ file = ["a", "b", "c", "d", "e", "f", "g", "h"]
 rank = [1, 2, 3, 4, 5, 6, 7, 8]
 file_dict = {file[i]: rank[i] for i in range(len(rank))}
 file_dict_inv = {rank[i]: file[i] for i in range(len(rank))}
-board = [(i, j) for i in file for j in rank]
 castle_rank = {0: 1, 1: 8}  # rank each side castles on.
 
 
