@@ -3,9 +3,6 @@ Define the pieces used in the chess game.
 The chess pieces inherit from a parent Piece class.
 
 TODO:
-
-- Get Pawn Queening and Pawn en-passant working
-- Get Castling working
 - Implement non-vanilla pieces e.g. Chancellor & Elephant
 
 """
