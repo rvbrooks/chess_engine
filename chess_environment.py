@@ -509,9 +509,9 @@ class ChessBoard:
             print(i, self.move_log[i])
 
 
+if __name__ == "__main__":
+    cb = ChessBoard()
+    cb.perspective = 0
 
-cb = ChessBoard()
-cb.perspective = 0
-
-cb.play_game(500, perspective=0, wait=0)
+    cb.play_game(500, perspective=0, wait=0)
 
