@@ -16,6 +16,8 @@ rank = [1, 2, 3, 4, 5, 6, 7, 8]
 file_dict = {file[i]: rank[i] for i in range(len(rank))}
 file_dict_inv = {rank[i]: file[i] for i in range(len(rank))}
 board = [(i, j) for i in file for j in rank]
+castle_rank = {0: 1, 1: 8}  # rank each side castles on.
+
 
 class Piece():
     def __init__(self, color=0, value=0, position=(0, 0)):
@@ -128,21 +130,34 @@ class Pawn(Piece):
         moves = [(ff, rr + 1 * s)]
         if self.n_moves == 0:
             moves.append((ff, rr + 2 * s))
-        # somewhere add in an en passant rule
 
         for position in attack_moves:
             if position[0] in rank and position[1] in rank:
                 position = (file_dict_inv[position[0]], position[1])
                 control.append(position)
                 if board_state[position]["piece"].color == enemy_player:  # only allow attack if piece is an enemy
-                    possible_moves.append(position)
+                    # if not final rank, don't promote
+                    if position[1] != castle_rank[enemy_player]:
+                        possible_moves.append(position)
+                    else: # if moving onto final rank, PROMOTE!
+                        promotions = ["Q", "R", "B", "N"]
+                        for promotion in promotions:
+                            position = (position[0], position[1], promotion)
+                            possible_moves.append(position)
 
         done_flag = False
         for position in moves:
             if position[0] in rank and position[1] in rank:
                 position = (file_dict_inv[position[0]], position[1])
                 if board_state[position]["piece"].label == "O" and done_flag == False:
-                    possible_moves.append(position)
+                    # if not final rank, don't promote
+                    if position[1] != castle_rank[enemy_player]:
+                        possible_moves.append(position)
+                    else:  # if moving onto final rank, PROMOTE!
+                        promotions = ["Q", "R", "B", "N"]
+                        for promotion in promotions:
+                            position = (position[0], position[1], promotion)
+                            possible_moves.append(position)
                 else:
                     done_flag = True
 

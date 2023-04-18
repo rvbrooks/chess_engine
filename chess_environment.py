@@ -4,11 +4,10 @@ not related to the movement of the pieces are defined.
 
 """
 
-import numpy as np
 import random
 import time
 import copy  # we need to use deepcopy for copying custom objects with nested iterables.
-from chess_pieces import *
+from chess_pieces import Piece, King, Queen, Rook, Bishop, Knight, Pawn
 
 random.seed(400)
 
@@ -19,24 +18,26 @@ random.seed(400)
 
 file = ["a", "b", "c", "d", "e", "f", "g", "h"]
 rank = [1, 2, 3, 4, 5, 6, 7, 8]
-file_dict = {file[i]: rank[i] for i in range(len(rank))}
-file_dict_inv = {rank[i]: file[i] for i in range(len(rank))}
-board = [(i, j) for i in file for j in rank]
+file_dict = {file[i]: rank[i] for i in range(len(rank))}  # letter:number
+file_dict_inv = {rank[i]: file[i] for i in range(len(rank))}  # numer:letter
+#board = [(i, j) for i in file for j in rank]
 castle_rank = {0: 1, 1: 8}  # rank each side castles on.
+available_pieces = {"K": King, "Q": Queen, "R": Rook, "B": Bishop, "N": Knight, "P": Pawn}
 
 
 class ChessBoard:
     def __init__(self):
-        self.square_info = {"piece": Piece(color=None), "control": None}
-        self.active_pieces = [] # pieces currently in action TODO: modify this when queening
+        self.board = {}
+        self.empty_square_info = {"piece": Piece(color=None), "control": None}
+        self.active_pieces = []  # pieces currently in action TODO: modify this when queening
         self.initialize_board()
-        self.turn = 0 # turn counter
-        self.graveyard = [] # list containing pieces that were captured.
+        self.turn = 0  # turn counter
+        self.graveyard = []  # list containing pieces that were captured.
         self.current_player = 0
         self.perspective = 0  # perspective used when printing the board.
-        self.game_end = False # flag if game has finished.
-        self.move_log = {} # record of all moves played.
-        self.game_result = None # the result of the game (1: white win, 0.5, draw, -1 black win)
+        self.game_end = False  # flag if game has finished.
+        self.move_log = {}  # record of all moves played.
+        self.game_result = None  # the result of the game (1: white win, 0.5, draw, -1 black win)
 
     def play_game(self, n_turns=5, perspective=0, wait=0.5):
         # TODO: make this a while loop until game finished.
@@ -68,7 +69,6 @@ class ChessBoard:
 
         legal = False
         while not legal:
-
             test_move = random.choice(allowed_moves)
             print(test_move)
             legal = self.try_update_board(test_move[0], test_move[1], self.current_player)
@@ -85,12 +85,19 @@ class ChessBoard:
         self.check_game_finished(allowed_moves)
 
         if self.game_end is False:
-            piece = self.board[test_move[0]]["piece"]
-            self.update_board(test_move[0], test_move[1])
+            print(test_move)
+            # if not a pawn promotion move:
+            if len(test_move[1]) == 2:
+                self.update_board(test_move[0], test_move[1])
+            # elif instead a pawn promtion move
+            else:
+                end_square = (test_move[1][0], test_move[1][1])
+                self.update_board(test_move[0], end_square, test_move[1][2])
+
             self.board = self.update_board_control(self.board)
 
         self.print_board()
-        self.print_board("control")
+        #self.print_board("control")
 
     def check_game_finished(self, allowed_moves):
         """
@@ -129,7 +136,7 @@ class ChessBoard:
            TODO: Load setup from a config file to allow custom layouts.
         """
         board_positions = [(i, j) for i in file for j in rank]
-        self.board = {k: self.square_info.copy() for k in board_positions}
+        self.board = {k: self.empty_square_info.copy() for k in board_positions}
         for ff in file:
             self.board[(ff, 2)]["piece"] = Pawn(color=0, position=(ff, 2))
             self.board[(ff, 7)]["piece"] = Pawn(color=1, position=(ff, 7))
@@ -158,73 +165,158 @@ class ChessBoard:
             if piece.label != "O":
                 self.active_pieces.append(piece)
 
+    def load_board(self, file):
+        with open(file, "r") as f:
+            for line in f:
+                print(line.read())
+               # data.split(";")
+                #print(data)
 
-    def print_color(self, text, piece_color, square_color=None):
-        """Print the board out in colors depending on piece color
-            CRED sets the colour to print, then CEND sets it back to white as usual.
+
+
+    def update_board(self, start_square, end_square, promotion=None):
+        """Once a move has been selected, update the board. Checks for special moves through
+            if statements:
+            1. If normal move?
+            2. If castling move?
+            3. If en-passant move?
+            4. If pawn promotion move?
         """
-        if piece_color == 0:
-            CRED = '\033[35m'
-
-        elif piece_color == 1:
-            CRED = '\033[33m'
-
-        else:
-            CRED = '\033[0m'
-
-        CEND = '\033[0m'
-        print(CRED + text + CEND, end="")
-
-    def update_board(self, start_square, end_square):
-        """Once a move has been selected, update the board."""
-
         # update the move log
         piece = self.board[start_square]["piece"]
         self.move_log[self.turn] = [self.current_player, piece.label, start_square, end_square]
 
-
-        # move the piece
-        if end_square not in ["O-O", "O-O-O"]:
+        # Basic piece movement
+        if end_square not in ["O-O", "O-O-O", "EP_kingside", "EP_queenside"] and promotion is None:
             if self.board[end_square]["piece"].label != "O":
                 self.graveyard.append(self.board[end_square]["piece"])
                 self.active_pieces.remove(self.board[end_square]["piece"])
             square_info = self.board[start_square].copy()
             square_info["piece"].position = end_square
 
-            self.board[start_square] = {"piece": Piece(color=None), "control": None}
+            self.board[start_square] = self.empty_square_info.copy()
             self.board[end_square] = square_info
             self.board[end_square]["piece"].n_moves += 1
 
         # Implement special castling rules:
-        elif start_square in [("e",1), ("e",8)] and end_square in ["O-O", "O-O-O"]:
-            r = start_square[1]
-            # Move king off stating square
-            king_info = self.board[start_square].copy()
-            self.board[start_square] = {"piece": Piece(color=None), "control": None}
-            if end_square == "O-O":
-                rook_info = self.board[("h", r)].copy()
-                self.board[("h",r)] = {"piece": Piece(color=None), "control": None}
-                self.board[("g",r)] = king_info
-                self.board[("f", r)] = rook_info
-                self.board[("g",r)]["piece"].n_moves += 1
-                self.board[("f", r)]["piece"].n_moves += 1
-            elif end_square == "O-O-O":
-                rook_info = self.board[("a", r)].copy()
-                self.board[("a",r)] = {"piece": Piece(color=None), "control": None}
-                self.board[("c", r)] = king_info
-                self.board[("d", r)] = rook_info
-                self.board[("c", r)]["piece"].n_moves += 1
-                self.board[("d", r)]["piece"].n_moves += 1
-            else:
-                print("Invalid castling?!")
-            # Implement castling rules!
+        elif start_square in [("e", 1), ("e", 8)] and end_square in ["O-O", "O-O-O"]:
+            self.board = self.perform_castling(self.board, start_square, end_square)
+
+        # implement special en-passant rules
+        elif end_square in ["EP_kingside", "EP_queenside"]:
+            self.board, captured_square = self.perform_en_passant(self.board, start_square, end_square)
+            self.graveyard.append(self.board[captured_square]["piece"])
+            self.active_pieces.remove(self.board[captured_square]["piece"])
+
+        # implement special pawn promotion rules
+        elif promotion in ["Q", "R", "B", "N"]:
+            if self.board[end_square]["piece"].label != "O":
+                self.graveyard.append(self.board[end_square]["piece"])
+                self.active_pieces.remove(self.board[end_square]["piece"])
+            self.board = self.perform_pawn_promotion(self.board, start_square, end_square, promotion)
+            self.active_pieces.append(self.board[end_square]["piece"])
+
         self.turn += 1
 
-        # reassess the square control of the board
+
+    def perform_castling(self, board, start_square, end_square):
+        """Update the board according to special castling rules.
+           Implemented as a separate method to update_board so that it can be called from
+           try_update_board.
+           Inputs:
+                - board dictionary object
+                - start_square: tuple of the initial square
+                - end_square: string flag for perform castling (O-O or O-O-O)
+            Outputs:
+                - updated board object
+        """
+        r = start_square[1]
+        # Move king off stating square
+        king_info = board[start_square].copy()
+        board[start_square] = self.empty_square_info.copy()
+        if end_square == "O-O":
+            rook_info = board[("h", r)].copy()
+            board[("h", r)] = self.empty_square_info.copy()
+            board[("g", r)] = king_info
+            board[("f", r)] = rook_info
+            board[("g", r)]["piece"].n_moves += 1
+            board[("f", r)]["piece"].n_moves += 1
+        elif end_square == "O-O-O":
+            rook_info = board[("a", r)].copy()
+            board[("a", r)] = self.empty_square_info.copy()
+            board[("c", r)] = king_info
+            board[("d", r)] = rook_info
+            board[("c", r)]["piece"].n_moves += 1
+            board[("d", r)]["piece"].n_moves += 1
+        else:
+            print("Invalid castling?!")
+        return (board)
+
+    def perform_en_passant(self, board, start_square, end_square):
+        """Update the board according to special en-passant rules.
+           Implemented as a separate method to update_board so that it can be called from
+           try_update_board.
+           Inputs:
+                - board dictionary object
+                - start_square: tuple of the initial square
+                - end_square: string flag for perform castling (EP_kingside / EP_queenside)
+            Outputs:
+                - updated board object
+        """
+        if self.current_player == 0:
+            s = 1
+        elif self.current_player == 1:
+            s = -1
+        square_info = board[start_square].copy()
+
+        board[start_square] = self.empty_square_info.copy()
+        if end_square == "EP_kingside":
+            end_square = (file_dict_inv[file_dict[start_square[0]] + 1], start_square[1] + 1 * s)
+            captured_square = (file_dict_inv[file_dict[start_square[0]] + 1], start_square[1])
+        elif end_square == "EP_queenside":
+            end_square = (file_dict_inv[file_dict[start_square[0]] - 1], start_square[1] + 1 * s)
+            captured_square = (file_dict_inv[file_dict[start_square[0]] - 1], start_square[1])
+
+        # remove the capture en-passant pawn to the graveyard
+
+        board[captured_square] = self.empty_square_info.copy()
+
+        # move the capturing pawn to the final square
+        square_info["piece"].position = end_square
+        board[end_square] = square_info
+        board[end_square]["piece"].n_moves += 1
+
+        return (board, captured_square)
+
+    def perform_pawn_promotion(self, board, start_square, end_square, promotion):
+        """Update the board according to special pawn promotion rules.
+                   Implemented as a separate method to update_board so that it can be called from
+                   try_update_board.
+                   Inputs:
+                        - board dictionary object
+                        - start_square: tuple of the initial square
+                        - end_square: square to promote on
+                        - promotion: choice of piece to promote to.
+                    Outputs:
+                        - updated board object
+                """
+        square_info = board[start_square].copy()
+        square_info["piece"].position = copy.copy(end_square)
+
+        board[start_square] = self.empty_square_info.copy()
+        P = available_pieces[promotion]
+
+        new_piece = P(color=self.current_player, position=end_square)
+        print(new_piece)
+
+        board[end_square]["piece"] = new_piece
+        return (board)
 
     def try_update_board(self, start_square, end_square, current_player):
         """Instead of updating the main board, make a copy to evaluate - used to see
-           if a move is legal (doesn't put a king in check)"""
+           if a move is legal (doesn't put a king in check)
+           FIXME: Need to implement the special rules in the try update!!
+           """
         # move the piece
         enemy_player = abs(1 - current_player)
 
@@ -239,7 +331,7 @@ class ChessBoard:
             square_info = temp_board[start_square]
             square_info["piece"].position = end_square
 
-            temp_board[start_square] = {"piece": Piece(color=None), "control": None}
+            temp_board[start_square] = self.empty_square_info.copy()
             temp_board[end_square] = square_info
             temp_board = self.update_board_control(temp_board)
 
@@ -252,7 +344,12 @@ class ChessBoard:
         return (allowed)
 
     def get_controlled_squares(self, board, current_player):
-        """For a given piece at a given position, return the squares it controls."""
+        """For a given piece at a given position, return the squares it controls.
+           Inputs:
+            - board: board dictionary object necessary to determine collisions
+            - current_player: integer
+
+            """
         controlled_squares = []
         for square in board:
             piece = board[square]["piece"]
@@ -260,15 +357,13 @@ class ChessBoard:
                 _, control = piece.get_possible_moves(board, current_player)
                 for c in control:
                     controlled_squares.append(c)
-        if piece.label == "K":
-            print(piece.label, piece.color, set(controlled_squares))
 
         return (set(controlled_squares))
 
     def update_board_control(self, board):
         """Take in the current position of all the pieces on the board
            and update the control overlay of the board (used to determine if
-           either king is in check and thier valid moves)."""
+           either king is in check and their valid moves)."""
         white_control = self.get_controlled_squares(board, 0)
         black_control = self.get_controlled_squares(board, 1)
 
@@ -304,21 +399,19 @@ class ChessBoard:
 
         # EN-PASSANT
         if len(self.move_log) > 2:
-            ml = self.move_log[self.turn-1] # check the last move if it was a double pawn move
-            print(ml[0],ml[1])
-            if ml[1] == "P" and ml[0] == enemy_player:
+            ml = self.move_log[self.turn - 1]  # check the last move if it was a double pawn move
+            if ml[1] == "P" and ml[0] == enemy_player and type(ml[3]) != str:
                 # if opponent pawn's last move was to move 2
-                if abs(ml[2][1]-ml[3][1]) == 2:
+                if abs(ml[2][1] - ml[3][1]) == 2:
                     f_end, r_end = ml[3]
-                    print(file_dict[f_end])
-                    if file_dict[f_end]-1 in rank:
-                        nf = file_dict_inv[file_dict[f_end]-1]
+                    if file_dict[f_end] - 1 in rank:
+                        nf = file_dict_inv[file_dict[f_end] - 1]
                         if board[(nf, r_end)]["piece"].label == "P" and \
                                 board[(nf, r_end)]["piece"].color == current_player:
                             moves.append(((nf, r_end), "EP_kingside"))
 
-                    if file_dict[f_end]+1 in rank:
-                        nf = file_dict_inv[file_dict[f_end]+1]
+                    if file_dict[f_end] + 1 in rank:
+                        nf = file_dict_inv[file_dict[f_end] + 1]
 
                         if board[(nf, r_end)]["piece"].label == "P" and \
                                 board[(nf, r_end)]["piece"].color == current_player:
@@ -352,11 +445,11 @@ class ChessBoard:
 
         # If all conditions for kingside castling are met:
         if all(kingside):
-            moves.append((("e",r), "O-O"))
+            moves.append((("e", r), "O-O"))
 
         # If all conditions for queenside castling are met:
         if all(queenside):
-            moves.append((("e",r), "O-O-O"))
+            moves.append((("e", r), "O-O-O"))
 
         return (moves)
 
@@ -392,41 +485,42 @@ class ChessBoard:
                 self.print_color(str(value) + sp, piece.color)
         print(" \n ")
 
+    def print_color(self, text, piece_color, square_color=None):
+        """Print the board out in colors depending on piece color
+            temp_color sets the colour to print, then base_color sets it back to white as usual.
+        """
+        if piece_color == 0:
+            temp_color = '\033[35m'
+
+        elif piece_color == 1:
+            temp_color = '\033[33m'
+
+        else:
+            temp_color = '\033[0m'
+
+        base_color = '\033[0m'
+        print(temp_color + text + base_color, end="")
+
     def print_move_log(self):
         """Print the moves played by each side in a game."""
         for i in range(len(self.move_log)):
             print(i, self.move_log[i])
 
 
-# = King()
 
-# print(K.get_possible_moves))
 cb = ChessBoard()
-cb.print_board()
 cb.perspective = 0
+
+cb.print_board()
 cb.print_board("control")
 
-cb.current_player = 0
-cb.update_board(("b", 2), ("b", 4))
-cb.current_player = 1
-cb.update_board(("f", 7), ("f", 5))
-cb.current_player = 0
-cb.update_board(("b", 4), ("b", 5))
-cb.current_player = 1
-cb.update_board(("c", 7), ("c", 5))
 
 
-m = cb.get_all_allowed_moves(cb.board, current_player=0)
 
-print(m)
+#cb.play_game(500, perspective=0, wait=0)
 
+# cb.print_move_log()
 
-#cb.board = cb.update_board_control(cb.board)
-
-cb.print_board()
-
-#cb.play_game(5, perspective=0, wait=0)
-
-cb.print_move_log()
+cb.load_board("board_config.txt")
 
 #
