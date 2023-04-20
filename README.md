@@ -6,7 +6,7 @@ Most of my life, it has been a fact that computers outperform even the best huma
 
 
 ## About my **chess_engine** project
-In this ongoing project, I'm aiming to apply similar deep reinforcement learning (DRL) methods to one of the most advanced chess AIs engines: [DeepMind's AlphaZero](https://arxiv.org/pdf/1712.01815.pdf).
+In this ongoing project, I'm aiming to apply similar deep reinforcement learning (DRL) methods to one of the most advanced chess AI engines: [DeepMind's AlphaZero](https://arxiv.org/pdf/1712.01815.pdf).
 
 ## Roadmap
 
