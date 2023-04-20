@@ -3,12 +3,11 @@ This is the script where the board environment object is defined, and the rules
 not related to the movement of the pieces are defined.
 
 """
-
+import os
 import random
 import time
 import copy  # we need to use deepcopy for copying custom objects with nested iterables.
 from chess_pieces import Piece, King, Queen, Rook, Bishop, Knight, Pawn
-
 random.seed(3) # 3005, 67436: black checkmates white; 3: white checkmates black
 
 # 1. Get board visualisation working
@@ -152,10 +151,12 @@ class ChessBoard:
                         self.game_end = True
                         self.game_result = 0.5
 
-    def initialize_board(self, filename="/board_configs/default_board_config.txt"):
+    def initialize_board(self, filename="default_board_config.txt"):
+        pwd = os.path.dirname(__file__).rsplit('\\', 1)[0]+"\\board_configs\\"
+        configname = pwd + filename
         board_positions = [(i, j) for i in file for j in rank]
         self.board = {k: self.empty_square_info.copy() for k in board_positions}
-        with open(filename, "r") as open_file:
+        with open(configname, "r") as open_file:
             for line in open_file:
                 print(line)
                 color, piece, ff, rr = line.split(";")

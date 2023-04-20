@@ -244,3 +244,7 @@ class Rook(Piece):
                         done_flags[j] = True
             i += 1
         return (possible_moves, control)
+
+if __name__ == "__main__":
+    piece = Pawn()
+    print(piece)
