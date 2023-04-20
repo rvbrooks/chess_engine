@@ -5,33 +5,40 @@ This will be a super simple proxy for chess to have a go coding a deep Q network
 
 import random
 
+
 # DQN: agent will take action.
 
 class Board:
+    PLAYER_DICT = {0: "O", 1: "X"}
 
-    PLAYER_DICT = {0 : "O", 1 : "X"}
-
-    def __init__(self, start_player = 0):
-        self.board_dim = 3
+    def __init__(self, start_player=0, board_dim = 3):
+        self.board_dim = board_dim
         self.board_idx = range(self.board_dim)
         self.empty_marker = "."
         self.turn = 0
         self.current_player = start_player
         self.board = {}
         self.initialize_board()
+        self.win_conditions = []
+        self.get_victory_conditions()
         self.game_end = False
 
     def initialize_board(self):
         for i in self.board_idx:
             for j in self.board_idx:
-                self.board[(i,j)] = self.empty_marker
+                self.board[(i, j)] = self.empty_marker
         self.print_board()
 
     def play_game(self):
-        while self.game_end == False:
+        while not self.game_end:
             x = random.choice(b.board_idx)
             y = random.choice(b.board_idx)
-            self.take_turn((x, y))
+            if self.turn < self.board_dim ** 2:
+                self.take_turn((x, y))
+            else:
+                print("Draw!")
+                break
+
     def take_turn(self, position):
         self.current_player = self.turn % 2
         if self.board[position] == self.empty_marker:
@@ -42,42 +49,56 @@ class Board:
         else:
             print("That square already has a piece in it! Try again.")
 
+    def get_victory_conditions(self):
+        valid_lines = []
+
+        line_diag_1 = []
+        line_diag_2 = []
+        for i in self.board_idx:
+            line_v = []
+            line_h = []
+
+            line_diag_1.append((i, i))
+            line_diag_2.append((i, self.board_dim - (i + 1)))
+
+            for j in self.board_idx:
+                line_v.append((i, j))
+                line_h.append((j,i))
+
+            valid_lines.append(line_v)
+            valid_lines.append(line_h)
+        valid_lines.append(line_diag_1)
+        valid_lines.append(line_diag_2)
+        self.win_conditions = valid_lines
+
     def assess_board(self):
         """Check for victory against the 8 possibilities for each side"""
-        valid_lines = [[(0, 0), (0, 1), (0, 2)],
-                       [(1, 0), (1, 1), (1, 2)],
-                       [(2, 0), (2, 1), (2, 2)],
-                       [(0, 0), (1, 0), (2, 0)],
-                       [(0, 1), (1, 1), (2, 1)],
-                       [(0, 2), (1, 2), (2, 2)],
-                       [(0, 0), (1, 1), (2, 2)],
-                       [(0, 2), (1, 1), (2, 0)],
-                       ]
 
-        for line in valid_lines:
+        for line in self.win_conditions:
             control = ""
             for position in line:
                 control += self.board[position]
-            if control == "OOO":
+            if control == "O"*self.board_dim:
                 print("\n O victory!")
                 self.game_end = True
-            elif control == "XXX":
+            elif control == "X"*self.board_dim:
                 print("\n X victory!")
                 self.game_end = True
 
-    def print_board(self, verbose = False):
+    def print_board(self, verbose=False):
         """Print out the board. Verbose will print the coordinates too."""
         if verbose == True:
             for i in self.board_idx:
                 print(" ")
                 for j in self.board_idx:
-                    print((i,j), end=" ")
+                    print((i, j), end=" ")
 
         for i in self.board_idx:
             print(" ")
             for j in self.board_idx:
-                print(self.board[(i,j)], end=" ")
+                print(self.board[(i, j)], end=" ")
         print("")
+
 
 # How do I represent the states to a neural network?
 # I expect that I would have 9 inputs corresponding to each square of the board.
@@ -88,6 +109,10 @@ class Board:
 # Can test by playing one network against a randomly choosing network.
 
 if __name__ == "__main__":
-    b = Board()
+    b = Board(board_dim = 5)
     b.play_game()
+    print(b.win_conditions)
+    print(len(b.win_conditions))
+
+
 
