@@ -1,4 +1,4 @@
-![alt text](https://github.com/rvbrooks/chess_engine/blob/main/chess_banner_2.png)
+![alt text](https://github.com/rvbrooks/chess_engine/blob/main/images/chess_banner_2.png)
 
 Deep Blue beats Gary Kasparov in 1997: the first time an artificial intelligence outperforms a human chess world champion.
 
@@ -18,6 +18,10 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
        -  Most win conditions are accounted for, except for resignation / offered draw / 3-fold repition and the 50 move rule.
 
 #### ☐ Choose a model
+##### Reinforcement Learning
  - There are many models that have been used to write chess AIs. My aim is to code a DRL model for chess, however being quite advanced it may make sense to consider other approaches firt.
  - I will build a DRL model for a simpler game like tic-tac-toe, to better understand the deep learning approach.
  - I will train the chess model to solve reduced-complexity examples like simple endgames, as a PoC.
+
+##### Supervised Learning
+ - I expect it is possible to train a supervised model on the vast database of games that have been played. I would be interesting to compare using this approach.
