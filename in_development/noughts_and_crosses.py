@@ -1,5 +1,5 @@
 """
-Simple coding of the game tic-tac-toe.
+Simple coding of the game Noughts & Crosses.
 This will be a super simple proxy for chess to have a go coding a deep Q network for a game.
 """
 
@@ -16,6 +16,7 @@ class Board:
         self.board_idx = range(self.board_dim)
         self.empty_marker = "."
         self.turn = 0
+        self.start_player = start_player
         self.current_player = start_player
         self.board = {}
         self.initialize_board()
@@ -28,6 +29,8 @@ class Board:
             for j in self.board_idx:
                 self.board[(i, j)] = self.empty_marker
         self.print_board()
+        self.turn = 0
+        self.current_player = self.start_player
 
     def play_game(self):
         while not self.game_end:
@@ -78,13 +81,25 @@ class Board:
             control = ""
             for position in line:
                 control += self.board[position]
-            if control == "O"*self.board_dim:
-                print("\n O victory!")
-                self.game_end = True
-            elif control == "X"*self.board_dim:
-                print("\n X victory!")
+            if control == self.current_player*self.board_dim:
+                print("\n {} victory!".format(self.current_player))
                 self.game_end = True
 
+    def get_board_state(self):
+        """Get the encoded board state for the deep Q network
+           Should return a dictionary of {index : -1/0/1}
+        """
+        indexed_states = {i : j for i, j in enumerate(self.board)}
+        observed_state = {}
+        for i in indexed_states:
+            if indexed_states[i] == "O":
+                observed_state[i] = -1
+            elif indexed_states[i] == "X":
+                observed_state[i] = 1
+            if indexed_states[i] == self.empty_marker:
+                observed_state[i] = 0
+
+        return observed_state
     def print_board(self, verbose=False):
         """Print out the board. Verbose will print the coordinates too."""
         if verbose == True:

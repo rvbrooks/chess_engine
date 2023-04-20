@@ -1,30 +1,28 @@
 import torch as T
 import torch.nn as nn
-import torch.nn.functional as F # to use ReLu for DNN
-import torch.optim as optim # for Adam optimiser
+import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
-import gym
-import matplotlib.pyplot as plt
+import copy
 
 # https://towardsdatascience.com/reinforcement-learning-explained-visually-part-5-deep-q-networks-step-by-step-5a5317197f4b#:~:text=The%20Target%20network%20predicts%20Q,of%20all%20those%20Q%2Dvalues.
-
-
 
 import random
 random.seed(1)
 
-
 class DeepQNetwork(nn.Module):
-    def __init__(self, alpha, input_dims, fc1_dims, fc2_dims, n_actions):
+    def __init__(self, alpha, dims=None):
         super().__init__()
-        self.input_dims = input_dims
-        self.fc1_dims = fc1_dims
-        self.fc2_dims = fc2_dims
-        self.n_actions = n_actions
+        self.n_layers = len(dims)
 
-        self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
-        self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
-        self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
+        # https://stackoverflow.com/questions/54678896/pytorch-valueerror-optimizer-got-an-empty-parameter-list
+        # supply layer dimensions as a list -> should make modification easier.
+        self.layer_list = nn.ModuleList()
+        for i in range(len(dims) - 1):
+            if i == 0:
+                self.layer_list.append(nn.Linear(*dims[i], dims[i+1]))
+            else:
+                self.layer_list.append(nn.Linear(dims[i], dims[i+1]))
 
         self.optimizer = optim.Adam(self.parameters(), lr = alpha)
         
@@ -35,16 +33,13 @@ class DeepQNetwork(nn.Module):
         self.to(self.device)
         
     def forward(self, state):
-
-        x = F.relu(self.fc1(state)) 
-        x = F.relu(self.fc2(x))
-        actions = self.fc3(x)
+        x = state
+        for layer in range(len(self.layer_list)-1):
+            x = F.relu(self.layer_list[layer])
+        actions = self.layer_list[-1](x)
 
         return(actions)
 
-
-    
-    
 class Agent():
     """
     The agent owns several objects:
@@ -52,32 +47,34 @@ class Agent():
         - A Target NN
         - State memory
     """
-    def __init__(self, gamma, epsilon, alpha, input_dims, batch_size, n_actions, init_sample_size = 1000,
-                 max_mem_size=100000, eps_end=0.01, eps_dec=1e-5, target_update_freq=100):
-        
+    def __init__(self, gamma, epsilon, alpha, layer_dims, batch_size, init_sample_size = 1000,
+                 max_mem_size=100000, eps_end=0.01, eps_dec=1e-5, targ_freq=100):
+
+        # layer dimensions: list of type [input_size, l1_size, l2_size, ..., ln_size, action_size]
+
         self.gamma = gamma
         self.epsilon = epsilon
         self.eps_min = eps_end
         self.eps_dec = eps_dec
         self.alpha = alpha
-        self.target_update_freq = target_update_freq
+        self.target_update_freq = targ_freq
         self.init_sample_size = init_sample_size
         
-        self.action_space = [i for i in range(n_actions)]
+        self.action_space = [i for i in range(layer_dims[-1])]
         
         self.mem_size = max_mem_size # this is size of the memory data set (e.g. N samples)
         self.batch_size = batch_size # this is how many samples you draw from replay in a given training
         self.mem_cntr = 0
-       
-        self.Q_eval = DeepQNetwork(self.alpha, n_actions=n_actions, input_dims=input_dims, 
-                                   fc1_dims=30, fc2_dims=30)
-        
-        self.Q_target = DeepQNetwork(self.alpha, n_actions=n_actions, input_dims=input_dims, 
-                                   fc1_dims=30, fc2_dims=30)
+
+        # Instantiate the Q network.
+        self.Q_eval = DeepQNetwork(self.alpha, layer_dims)
+
+        # Instantiate the target network.
+        self.Q_target = copy.deepcopy(self.Q_eval)
         
         # Replay is (state, new_state, action, reward)
-        self.state_memory = np.zeros((self.mem_size, *input_dims), dtype=np.float32)
-        self.new_state_memory = np.zeros((self.mem_size, *input_dims),dtype=np.float32)
+        self.state_memory = np.zeros((self.mem_size, *layer_dims[0]), dtype=np.float32)
+        self.new_state_memory = np.zeros((self.mem_size, *layer_dims[0]),dtype=np.float32)
         self.action_memory = np.zeros((self.mem_size),dtype=np.int32)
         self.reward_memory = np.zeros((self.mem_size),dtype=np.float32)
                 
@@ -95,37 +92,25 @@ class Agent():
         
         self.mem_cntr += 1
         
-    def choose_action(self, observed_state, AA):
+    def choose_action(self, observed_state):
         """this is jsut the epsilon greedy make choice"""
 
+        # Q-greedy: exploit.
         if np.random.random() > self.epsilon:
-           # print("greedy")
             state = T.tensor([observed_state]).to(self.Q_eval.device)
             actions = self.Q_eval.forward(state) # this is a tensor of Q values
+            action = T.argmax(actions).item()
 
-
-            allowed_qvals = []
-            for i in allowed_actions:
-                allowed_qvals.append(actions[0,i].item())
-            min_q_idx = np.argmin(allowed_qvals)
-            action = allowed_actions[min_q_idx] # the action here is the integer which labels a codon.
-
+        # Explore.
         else:
-           # print("explore")
-            action = np.random.choice(codon_index_dict[AA])
+            action = np.random.choice(self.action_space)
         
         return(action)
 
-    
     def learn(self):
-       
-        # this statement is saying that if the replay memory is not sufficeintly full
-        # (data points < batch size), then SKIP the learning
+
         if self.mem_cntr < self.init_sample_size:
-            # don't bother learning
             return
-        
-        # once sufficently full, the learning part actually does something.
 
         self.Q_eval.optimizer.zero_grad()
 
@@ -156,18 +141,27 @@ class Agent():
         else:
             self.epsilon = self.eps_min
 
-
-        # update target network by overwriting it with the Q_eval network every k runs
-        
         if self.mem_cntr % self.target_update_freq == 0:
-            self.Q_target = self.Q_eval
+            self.Q_target = copy.deepcopy(self.Q_eval)
 
 
 if __name__ == "__main__":
 
-    agent = Agent(gamma=0.99, epsilon=1.0, batch_size=300, n_actions=len(env.action_space),
-                  init_sample_size = init_sample_size, target_update_freq = 200,
-                  eps_end = 0.01, input_dims=[len(env.input_space)], alpha=0.1, eps_dec=epsilon_decrement)
+    input_space = [15]
+    l1, l2 = 30, 30
+    action_space = 15
+
+    ld = [input_space, l1, l2, action_space]
+
+    agent = Agent(gamma=0.99,
+                  epsilon=1.0,
+                  alpha=0.1,
+                  batch_size=300,
+                  layer_dims=ld,
+                  init_sample_size=1000,
+                  targ_freq=200,
+                  eps_end=0.01,
+                  eps_dec=0.00005)
     
     epsilons = []
     
