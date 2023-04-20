@@ -13,11 +13,19 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
 #### ✅ Define the rules of chess
   - For personal interest, I coded up the rules of chess rather than using an existing Python library.
   - *Status*: 
-       -  The computer can play a completely random game against itself, with support for the special move cases of castling, en-passant and pawn promotion
-       -  The board state and board square control can be printed out for each move in the game.
-       -  Most win conditions are accounted for, except for resignation / offered draw / 3-fold repition and the 50 move rule.
+       - ✅ The computer can play a completely random game against itself, with support for the special move cases of castling, en-passant and pawn promotion
+       - ✅ The board state and board square control can be printed out for each move in the game.
+       - ☐  Most win conditions are accounted for, except for resignation / offered draw / 3-fold repition and the 50 move rule.
 
-#### ☐ Choose a model
+#### ☐ Try a toy model
+  - Going straight to deep reinforcement learning in chess is a big jump. First I will try some reinforcement learning on a simple game. Tic-tac-toe is extremely simple and should be easy to get working.
+  - *Status*:
+      -  ✅ Code up the rules of tic-tac-toe.
+      -  ☐ Train a learning algorithm to solve it.
+
+
+
+#### ☐ Choose a model for chess learning
 ##### Reinforcement Learning
  - There are many models that have been used to write chess AIs. My aim is to code a DRL model for chess, however being quite advanced it may make sense to consider other approaches firt.
  - I will build a DRL model for a simpler game like tic-tac-toe, to better understand the deep learning approach.
