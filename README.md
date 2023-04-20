@@ -1,4 +1,4 @@
-![alt text](https://github.com/rvbrooks/chess_engine/blob/main/chess_banner.png)
+![alt text](https://github.com/rvbrooks/chess_engine/blob/main/chess_banner_2.png)
 
 # chess_engine
 An ongoing project where I am applying deep reinforcement learning to build my own chess AI.
