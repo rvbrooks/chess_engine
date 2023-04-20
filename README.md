@@ -1,4 +1,4 @@
-![alt text](https://github.com/rvbrooks/chess_engine/blob/main/chess_banner_2.png)
+![alt text](https://github.com/rvbrooks/chess_engine/blob/main/images/chess_banner_2.png)
 
 Deep Blue beats Gary Kasparov in 1997: the first time an artificial intelligence outperforms a human chess world champion.
 
