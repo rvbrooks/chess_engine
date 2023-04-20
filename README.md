@@ -2,7 +2,7 @@
 
 Deep Blue beats Gary Kasparov in 1997: the first time an artificial intelligence outperforms a human chess world champion.
 
-Most of my life, it has been a fact that computers outperform even the best human players at chess. This has always fascinated me, never more than now that the AI revolution is underway: algorithms that were once confined to games of chess are being used to solve far-reaching and meaningful problems globally.
+Most of my life, it has been a fact that computers outperform even the best human players at chess. This has always fascinated me, especially now that the AI revolution is underway: algorithms that were once confined to games of chess are being used to solve far-reaching and meaningful problems globally.
 
 
 ## About my **chess_engine** project
