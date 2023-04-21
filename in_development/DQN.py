@@ -95,6 +95,7 @@ class Agent():
     def choose_action(self, observed_state):
         """this is jsut the epsilon greedy make choice"""
 
+
         # Q-greedy: exploit.
         if np.random.random() > self.epsilon:
             state = T.tensor([observed_state]).to(self.Q_eval.device)

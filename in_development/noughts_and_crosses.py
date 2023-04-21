@@ -46,8 +46,8 @@ class Board:
         self.current_player = self.turn % 2
         if self.board[position] == self.empty_marker:
             self.board[position] = Board.PLAYER_DICT[self.current_player]
-            self.print_board()
             self.assess_board()
+            self.print_board()
             self.turn += 1
         else:
             print("That square already has a piece in it! Try again.")
@@ -81,8 +81,8 @@ class Board:
             control = ""
             for position in line:
                 control += self.board[position]
-            if control == self.current_player*self.board_dim:
-                print("\n {} victory!".format(self.current_player))
+            if control == Board.PLAYER_DICT[self.current_player]*self.board_dim:
+                print("\n {} victory!".format(Board.PLAYER_DICT[self.current_player]))
                 self.game_end = True
 
     def get_board_state(self):
@@ -91,15 +91,18 @@ class Board:
         """
         indexed_states = {i : j for i, j in enumerate(self.board)}
         observed_state = {}
+
         for i in indexed_states:
-            if indexed_states[i] == "O":
+            position = indexed_states[i]
+            if self.board[position] == "O":
                 observed_state[i] = -1
-            elif indexed_states[i] == "X":
+            elif self.board[position] == "X":
                 observed_state[i] = 1
-            if indexed_states[i] == self.empty_marker:
+            elif self.board[position] == self.empty_marker:
                 observed_state[i] = 0
 
         return observed_state
+
     def print_board(self, verbose=False):
         """Print out the board. Verbose will print the coordinates too."""
         if verbose == True:
@@ -124,10 +127,19 @@ class Board:
 # Can test by playing one network against a randomly choosing network.
 
 if __name__ == "__main__":
-    b = Board(board_dim = 5)
-    b.play_game()
-    print(b.win_conditions)
-    print(len(b.win_conditions))
+    b = Board(board_dim = 3)
+    b.take_turn((0,1))
+    b.take_turn((2,2))
+    b.take_turn((1,1))
 
+    o = b.get_board_state()
+    all_actions = list(range(len(o)))
+    print("o", o)
+    print(all_actions)
+    mask = [None if o[i] != 0 else i for i in o ]
+    print("mask", mask)
+
+    allowed_actions = [i for i in all_actions if mask[i] not in [None]]
+    print("aa", allowed_actions)
 
 
