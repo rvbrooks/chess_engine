@@ -35,7 +35,7 @@ class DeepQNetwork(nn.Module):
     def forward(self, state):
         x = state
         for layer in range(len(self.layer_list)-1):
-            x = F.relu(self.layer_list[layer])
+            x = F.relu(self.layer_list[layer](x))
         actions = self.layer_list[-1](x)
 
         return(actions)
@@ -77,8 +77,9 @@ class Agent():
         self.new_state_memory = np.zeros((self.mem_size, *layer_dims[0]),dtype=np.float32)
         self.action_memory = np.zeros((self.mem_size),dtype=np.int32)
         self.reward_memory = np.zeros((self.mem_size),dtype=np.float32)
+        self.terminal_memory = np.zeros((self.mem_size), dtype=bool)
                 
-    def update_replay_memory(self, state, action, reward, state_):
+    def update_replay_memory(self, state, action, reward, state_, done):
         """store current observation in replay memory
            this adds a new sample to the memory and overwrites if full.
         """
@@ -89,22 +90,26 @@ class Agent():
         self.new_state_memory[index] = state_
         self.reward_memory[index] = reward
         self.action_memory[index] = action
+        self.terminal_memory[index] = done
+
         
         self.mem_cntr += 1
         
-    def choose_action(self, observed_state):
-        """this is jsut the epsilon greedy make choice"""
-
+    def choose_action(self, observed_state, allowed_actions):
 
         # Q-greedy: exploit.
+        self.epsilon = 0
         if np.random.random() > self.epsilon:
             state = T.tensor([observed_state]).to(self.Q_eval.device)
             actions = self.Q_eval.forward(state) # this is a tensor of Q values
-            action = T.argmax(actions).item()
+
+            # restrict the possible moves to those allowed by the state of the board.
+            allowed_qvals = [actions[0, i].item() for i in allowed_actions]
+            action = allowed_actions[np.argmax(allowed_qvals)]
 
         # Explore.
         else:
-            action = np.random.choice(self.action_space)
+            action = np.random.choice(allowed_actions)
         
         return(action)
 
@@ -131,7 +136,8 @@ class Agent():
         q_eval = self.Q_eval.forward(state_batch)[batch_index, action_batch]
         q_next = self.Q_target.forward(new_state_batch) 
 
-        q_target = (1-self.gamma)*reward_batch + self.gamma * T.min(q_next, dim=1)[0]
+       # q_target = (1-self.gamma)*reward_batch + self.gamma * T.min(q_next, dim=1)[0]
+        q_target = reward_batch + self.gamma * T.max(q_next, dim=1)[0]
 
         loss = self.Q_eval.loss(q_target, q_eval).to(self.Q_eval.device) # just calculating loss func
         loss.backward() # updates the weights
@@ -165,4 +171,6 @@ if __name__ == "__main__":
                   eps_dec=0.00005)
     
     epsilons = []
+
+   # agent.choose_action([1]*15, [1]*15)
     

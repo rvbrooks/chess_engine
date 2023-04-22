@@ -2,7 +2,7 @@
 Simple coding of the game Noughts & Crosses.
 This will be a super simple proxy for chess to have a go coding a deep Q network for a game.
 """
-
+import numpy as np
 import random
 
 
@@ -23,6 +23,7 @@ class Board:
         self.win_conditions = []
         self.get_victory_conditions()
         self.game_end = False
+        self.game_reward = 0
 
     def initialize_board(self):
         for i in self.board_idx:
@@ -84,24 +85,25 @@ class Board:
             if control == Board.PLAYER_DICT[self.current_player]*self.board_dim:
                 print("\n {} victory!".format(Board.PLAYER_DICT[self.current_player]))
                 self.game_end = True
+                self.game_reward = 1
 
     def get_board_state(self):
         """Get the encoded board state for the deep Q network
            Should return a dictionary of {index : -1/0/1}
         """
         indexed_states = {i : j for i, j in enumerate(self.board)}
-        observed_state = {}
+        observed_state = []
 
         for i in indexed_states:
             position = indexed_states[i]
             if self.board[position] == "O":
-                observed_state[i] = -1
+                observed_state.append(-1)
             elif self.board[position] == "X":
-                observed_state[i] = 1
+                observed_state.append(1)
             elif self.board[position] == self.empty_marker:
-                observed_state[i] = 0
+                observed_state.append(0)
 
-        return observed_state
+        return np.array(observed_state, dtype=np.float32)
 
     def print_board(self, verbose=False):
         """Print out the board. Verbose will print the coordinates too."""
@@ -133,13 +135,7 @@ if __name__ == "__main__":
     b.take_turn((1,1))
 
     o = b.get_board_state()
-    all_actions = list(range(len(o)))
-    print("o", o)
-    print(all_actions)
-    mask = [None if o[i] != 0 else i for i in o ]
-    print("mask", mask)
+    print(o)
 
-    allowed_actions = [i for i in all_actions if mask[i] not in [None]]
-    print("aa", allowed_actions)
 
 
