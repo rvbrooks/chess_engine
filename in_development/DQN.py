@@ -8,7 +8,7 @@ import copy
 # https://towardsdatascience.com/reinforcement-learning-explained-visually-part-5-deep-q-networks-step-by-step-5a5317197f4b#:~:text=The%20Target%20network%20predicts%20Q,of%20all%20those%20Q%2Dvalues.
 
 import random
-random.seed(1)
+#random.seed(1)
 
 class DeepQNetwork(nn.Module):
     def __init__(self, alpha, dims=None):
@@ -98,7 +98,6 @@ class Agent():
     def choose_action(self, observed_state, allowed_actions):
 
         # Q-greedy: exploit.
-        self.epsilon = 0
         if np.random.random() > self.epsilon:
             state = T.tensor([observed_state]).to(self.Q_eval.device)
             actions = self.Q_eval.forward(state) # this is a tensor of Q values

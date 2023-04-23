@@ -15,7 +15,7 @@ file_dict_inv = {rank[i]: file[i] for i in range(len(rank))}
 castle_rank = {0: 1, 1: 8}  # rank each side castles on.
 
 
-class Piece():
+class Piece:
     def __init__(self, color=0, value=0, position=(0, 0)):
         self.value = value
         self.position = position

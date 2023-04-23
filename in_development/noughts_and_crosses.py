@@ -11,7 +11,7 @@ import random
 class Board:
     PLAYER_DICT = {0: "O", 1: "X"}
 
-    def __init__(self, start_player=0, board_dim = 3):
+    def __init__(self, start_player=1, board_dim = 3):
         self.board_dim = board_dim
         self.board_idx = range(self.board_dim)
         self.empty_marker = "."
@@ -24,14 +24,19 @@ class Board:
         self.get_victory_conditions()
         self.game_end = False
         self.game_reward = 0
+        self.win_log = {"O":0,"X":0,"draw":0}
 
     def initialize_board(self):
         for i in self.board_idx:
             for j in self.board_idx:
                 self.board[(i, j)] = self.empty_marker
-        self.print_board()
+        #self.print_board()
         self.turn = 0
         self.current_player = self.start_player
+        self.game_end = False
+        self.game_reward = 0
+
+
 
     def play_game(self):
         while not self.game_end:
@@ -41,17 +46,23 @@ class Board:
                 self.take_turn((x, y))
             else:
                 print("Draw!")
+                self.win_log["draw"] += 1
                 break
 
     def take_turn(self, position):
-        self.current_player = self.turn % 2
         if self.board[position] == self.empty_marker:
             self.board[position] = Board.PLAYER_DICT[self.current_player]
             self.assess_board()
-            self.print_board()
             self.turn += 1
         else:
-            print("That square already has a piece in it! Try again.")
+            if 0 not in self.get_board_state():
+                self.game_end = True
+                self.win_log["draw"] += 1
+              #  print("draw")
+        self.current_player = abs(1-self.current_player)
+           # print("That square already has a piece in it! Try again.")
+           # self.print_board()
+           # print("Move attempted:",self.current_player, position)
 
     def get_victory_conditions(self):
         valid_lines = []
@@ -77,15 +88,17 @@ class Board:
 
     def assess_board(self):
         """Check for victory against the 8 possibilities for each side"""
-
         for line in self.win_conditions:
             control = ""
             for position in line:
                 control += self.board[position]
             if control == Board.PLAYER_DICT[self.current_player]*self.board_dim:
-                print("\n {} victory!".format(Board.PLAYER_DICT[self.current_player]))
+               # print("\n {} victory!".format(Board.PLAYER_DICT[self.current_player]))
                 self.game_end = True
-                self.game_reward = 1
+                if self.current_player == 1:
+                    self.game_reward = 1
+
+                self.win_log[Board.PLAYER_DICT[self.current_player]] += 1
 
     def get_board_state(self):
         """Get the encoded board state for the deep Q network
