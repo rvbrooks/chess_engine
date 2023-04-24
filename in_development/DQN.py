@@ -1,3 +1,13 @@
+"""
+Vincent Brooks
+https://github.com/rvbrooks
+
+This script is my implementation of a deep Q learning algorithm.
+It's adapted from the YouTube video by Machine Learning with Phil:
+https://www.youtube.com/watch?v=wc-FxNENg9U
+
+"""
+
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
@@ -110,6 +120,21 @@ class Agent():
         # Explore.
         else:
             action = np.random.choice(allowed_actions)
+
+        return(action)
+
+    def choose_greedy_action(self, observed_state, allowed_actions):
+        """Once trained, always take the greedy action."""
+        # Q-greedy: exploit.
+
+        observed_state = np.array([observed_state])
+        state = T.tensor(observed_state).to(self.Q_eval.device)
+        actions = self.Q_eval.forward(state) # this is a tensor of Q values
+
+        # restrict the possible moves to those allowed by the state of the board.
+        allowed_qvals = [actions[0, i].item() for i in allowed_actions]
+        action = allowed_actions[np.argmax(allowed_qvals)]
+
 
         return(action)
 

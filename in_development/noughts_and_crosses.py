@@ -1,6 +1,9 @@
 """
-Simple coding of the game Noughts & Crosses.
-This will be a super simple proxy for chess to have a go coding a deep Q network for a game.
+Vincent Brooks
+https://github.com/rvbrooks
+
+My implementation of a game environment for Noughts & Crosses.
+
 """
 import numpy as np
 import random
@@ -27,6 +30,9 @@ class Board:
         self.win_log = {"O":0,"X":0,"draw":0}
 
     def initialize_board(self):
+        """
+        (Re)-Initializes board to empty state, and environment variables to start state values.
+        """
         for i in self.board_idx:
             for j in self.board_idx:
                 self.board[(i, j)] = self.empty_marker
@@ -38,6 +44,10 @@ class Board:
         self.win_log = {"O":0,"X":0,"draw":0}
 
     def play_game(self):
+        """
+        Test function not used for DRL.
+        Plays 2 random actors against each other until game completion.
+        """
         while not self.game_end:
             x = random.choice(b.board_idx)
             y = random.choice(b.board_idx)
@@ -49,6 +59,16 @@ class Board:
                 break
 
     def take_turn(self, position):
+        """
+        Take a turn in Noughts & Crosses (place an X or a O).
+        Input:
+            - position: where on the board to place the X or O.
+        Output:
+            - updated environment
+            - updated current player
+            - checks for win / draw condition.
+
+        """
         if self.board[position] == self.empty_marker:
             self.board[position] = Board.PLAYER_DICT[self.current_player]
             self.assess_board()
@@ -79,6 +99,8 @@ class Board:
     def get_board_state(self):
         """Get the encoded board state for the deep Q network
            Should return a dictionary of {index : -1/0/1}
+           Outputs:
+                - observation: a list of the observed positions of X's & O's.
         """
         indexed_states = {i : j for i, j in enumerate(self.board)}
         observed_state = []
@@ -86,15 +108,18 @@ class Board:
         for i in indexed_states:
             position = indexed_states[i]
             if self.board[position] == "O":
-                observed_state.append(2) # can't use -1 for float32
+                observed_state.append(-1.)
             elif self.board[position] == "X":
-                observed_state.append(1)
+                observed_state.append(1.)
             elif self.board[position] == self.empty_marker:
-                observed_state.append(0)
+                observed_state.append(0.)
 
         return np.array(observed_state, dtype=np.float32)
 
     def get_victory_conditions(self):
+        """Noughts & Crosses is won when a line of X's or O's is achieved.
+           This function gets the lines  of baord coordinates along which this can be achieved.
+        """
         valid_lines = []
 
         line_diag_1 = []
@@ -116,18 +141,14 @@ class Board:
         valid_lines.append(line_diag_2)
         self.win_conditions = valid_lines
 
-    def print_board(self, verbose=False):
-        """Print out the board. Verbose will print the coordinates too."""
-        if verbose:
-            for i in self.board_idx:
-                print(" ")
-                for j in self.board_idx:
-                    print((i, j), end=" ")
+    def print_board(self):
+        """Print out the board state with O's and X's."""
 
         for i in self.board_idx:
             print(" ")
             for j in self.board_idx:
                 print(self.board[(i, j)], end=" ")
+
         print("")
 
 
@@ -149,4 +170,7 @@ if __name__ == "__main__":
     print(o)
 
 
-
+# Lessons:
+# For binary states, you want them to be substantially different;
+# when using X=1 and O=2 encoding, it didn't train well (65% winrate)
+# when using X=1, O=-1 winrate, it had 97% winrate.
