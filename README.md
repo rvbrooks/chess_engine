@@ -35,3 +35,13 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
 
 ##### Supervised Learning
  - I expect it is possible to train a supervised model on the vast database of games that have been played. I would be interesting to compare using this approach.
+
+
+## Project Structure
+
+chess_engine
+├── docs   
+├── src 
+├── test
+├── tools
+└── README.md
