@@ -29,7 +29,7 @@ class DeepQNetwork(nn.Module):
         self.loss = nn.MSELoss()
         
         self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
-        
+
         self.to(self.device)
         
     def forward(self, state):
@@ -47,8 +47,8 @@ class Agent():
         - A Target NN
         - State memory
     """
-    def __init__(self, gamma, epsilon, alpha, layer_dims, batch_size, init_sample_size = 1000,
-                 max_mem_size=100000, eps_end=0.01, eps_dec=1e-5, targ_freq=100):
+    def __init__(self, gamma, alpha, layer_dims, batch_size, init_sample_size = 1000,
+                 max_mem_size=100000, epsilon=1., eps_end=0.01, eps_dec=1e-5, targ_freq=100):
 
         # layer dimensions: list of type [input_size, l1_size, l2_size, ..., ln_size, action_size]
 
@@ -99,7 +99,8 @@ class Agent():
 
         # Q-greedy: exploit.
         if np.random.random() > self.epsilon:
-            state = T.tensor([observed_state]).to(self.Q_eval.device)
+            observed_state = np.array([observed_state])
+            state = T.tensor(observed_state).to(self.Q_eval.device)
             actions = self.Q_eval.forward(state) # this is a tensor of Q values
 
             # restrict the possible moves to those allowed by the state of the board.
@@ -109,7 +110,7 @@ class Agent():
         # Explore.
         else:
             action = np.random.choice(allowed_actions)
-        
+
         return(action)
 
     def learn(self):

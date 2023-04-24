@@ -23,20 +23,19 @@ class Board:
         self.win_conditions = []
         self.get_victory_conditions()
         self.game_end = False
-        self.game_reward = 0
+        self.game_reward = -1
         self.win_log = {"O":0,"X":0,"draw":0}
 
     def initialize_board(self):
         for i in self.board_idx:
             for j in self.board_idx:
                 self.board[(i, j)] = self.empty_marker
-        #self.print_board()
+
         self.turn = 0
         self.current_player = self.start_player
         self.game_end = False
-        self.game_reward = 0
-
-
+        self.game_reward = -1
+        self.win_log = {"O":0,"X":0,"draw":0}
 
     def play_game(self):
         while not self.game_end:
@@ -58,11 +57,42 @@ class Board:
             if 0 not in self.get_board_state():
                 self.game_end = True
                 self.win_log["draw"] += 1
-              #  print("draw")
+                self.game_reward = 5
         self.current_player = abs(1-self.current_player)
-           # print("That square already has a piece in it! Try again.")
-           # self.print_board()
-           # print("Move attempted:",self.current_player, position)
+
+    def assess_board(self):
+        """Check for victory against the 8 possibilities for each side"""
+        for line in self.win_conditions:
+            control = ""
+            for position in line:
+                control += self.board[position]
+            if control == Board.PLAYER_DICT[self.current_player]*self.board_dim:
+               # print("\n {} victory!".format(Board.PLAYER_DICT[self.current_player]))
+                self.game_end = True
+                if self.current_player == 1:
+                    self.game_reward = 5
+                else:
+                    self.game_reward = -1000
+
+                self.win_log[Board.PLAYER_DICT[self.current_player]] += 1
+
+    def get_board_state(self):
+        """Get the encoded board state for the deep Q network
+           Should return a dictionary of {index : -1/0/1}
+        """
+        indexed_states = {i : j for i, j in enumerate(self.board)}
+        observed_state = []
+
+        for i in indexed_states:
+            position = indexed_states[i]
+            if self.board[position] == "O":
+                observed_state.append(2) # can't use -1 for float32
+            elif self.board[position] == "X":
+                observed_state.append(1)
+            elif self.board[position] == self.empty_marker:
+                observed_state.append(0)
+
+        return np.array(observed_state, dtype=np.float32)
 
     def get_victory_conditions(self):
         valid_lines = []
@@ -86,41 +116,9 @@ class Board:
         valid_lines.append(line_diag_2)
         self.win_conditions = valid_lines
 
-    def assess_board(self):
-        """Check for victory against the 8 possibilities for each side"""
-        for line in self.win_conditions:
-            control = ""
-            for position in line:
-                control += self.board[position]
-            if control == Board.PLAYER_DICT[self.current_player]*self.board_dim:
-               # print("\n {} victory!".format(Board.PLAYER_DICT[self.current_player]))
-                self.game_end = True
-                if self.current_player == 1:
-                    self.game_reward = 1
-
-                self.win_log[Board.PLAYER_DICT[self.current_player]] += 1
-
-    def get_board_state(self):
-        """Get the encoded board state for the deep Q network
-           Should return a dictionary of {index : -1/0/1}
-        """
-        indexed_states = {i : j for i, j in enumerate(self.board)}
-        observed_state = []
-
-        for i in indexed_states:
-            position = indexed_states[i]
-            if self.board[position] == "O":
-                observed_state.append(-1)
-            elif self.board[position] == "X":
-                observed_state.append(1)
-            elif self.board[position] == self.empty_marker:
-                observed_state.append(0)
-
-        return np.array(observed_state, dtype=np.float32)
-
     def print_board(self, verbose=False):
         """Print out the board. Verbose will print the coordinates too."""
-        if verbose == True:
+        if verbose:
             for i in self.board_idx:
                 print(" ")
                 for j in self.board_idx:
