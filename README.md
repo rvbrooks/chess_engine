@@ -17,14 +17,15 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
        - ✅ The board state and board square control can be printed out for each move in the game.
        - ☐  Most win conditions are accounted for, except for resignation / offered draw / 3-fold repition and the 50 move rule.
 
-#### ☐ Try deep Q learning for an easier game.
+#### ✅ Implement deep Q learning for an easier game.
   - Going straight to deep reinforcement learning in chess is a big jump. First I will try some reinforcement learning on a simple game. Noughts & Crosses (N&C) is extremely simple and should be easy to get working.
   - *Status*:
       -  ✅ Coded up the rules of Noughts & Crosses.
-      -  ✅ Implemented deep reinforcement learning for N&C, but it isn't training as well as expected.
-      -  ☐ Debug deep learning for N&C: expect 0% loss rate with optimal play, but this isn't happening.
-
-
+      -  ✅ Implement deep reinforcement learning for N&C.
+      -  ✅ Winrate for a trained policy when going first vs a randomly acting opponent is ~98%, which is best expected.
+      -  ✅ Winrate for a trained policy when going second vs a randomly acting opponent is ~82%, which is best expected.
+      -  ☐ Play 2 trained agents against each other -> expect 100% draw rate.
+      -  ☐ Document results and process in more detail.
 
 #### ☐ Choose a model for chess learning
 ##### Reinforcement Learning
