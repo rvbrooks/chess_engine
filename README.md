@@ -38,10 +38,11 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
 
 
 ## Project Structure
-
+```
 chess_engine
 ├── docs   
 ├── src 
 ├── test
 ├── tools
 └── README.md
+```
