@@ -18,10 +18,11 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
        - ☐  Most win conditions are accounted for, except for resignation / offered draw / 3-fold repition and the 50 move rule.
 
 #### ☐ Try deep Q learning for an easier game.
-  - Going straight to deep reinforcement learning in chess is a big jump. First I will try some reinforcement learning on a simple game. Noughts & Crosses is extremely simple and should be easy to get working.
+  - Going straight to deep reinforcement learning in chess is a big jump. First I will try some reinforcement learning on a simple game. Noughts & Crosses (N&C) is extremely simple and should be easy to get working.
   - *Status*:
-      -  ✅ Code up the rules of Noughts & Crosses.
-      -  ☐ Train a learning algorithm to solve it.
+      -  ✅ Coded up the rules of Noughts & Crosses.
+      -  ✅ Implemented deep reinforcement learning for N&C, but it isn't training as well as expected.
+      -  ☐ Debug deep learning for N&C: expect 0% loss rate with optimal play, but this isn't happening.
 
 
 
