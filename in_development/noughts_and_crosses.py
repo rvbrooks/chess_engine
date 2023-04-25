@@ -14,22 +14,19 @@ import random
 class Board:
     PLAYER_DICT = {0: "O", 1: "X"}
 
-    def __init__(self, start_player=1, board_dim = 3):
+    def __init__(self, board_dim = 3):
         self.board_dim = board_dim
         self.board_idx = range(self.board_dim)
         self.empty_marker = "."
         self.turn = 0
-        self.start_player = start_player
-        self.current_player = start_player
         self.board = {}
         self.initialize_board()
         self.win_conditions = []
         self.get_victory_conditions()
         self.game_end = False
-        self.game_reward = -1
         self.win_log = {"O":0,"X":0,"draw":0}
 
-    def initialize_board(self):
+    def initialize_board(self, start_player=0):
         """
         (Re)-Initializes board to empty state, and environment variables to start state values.
         """
@@ -38,9 +35,10 @@ class Board:
                 self.board[(i, j)] = self.empty_marker
 
         self.turn = 0
-        self.current_player = self.start_player
+        self.current_player = start_player
+
         self.game_end = False
-        self.game_reward = -1
+        self.game_reward = 0
         self.win_log = {"O":0,"X":0,"draw":0}
 
     def play_game(self):
@@ -74,10 +72,10 @@ class Board:
             self.assess_board()
             self.turn += 1
         else:
-            if 0 not in self.get_board_state():
+            if 0 not in self.get_board_state() and not self.game_end:
                 self.game_end = True
                 self.win_log["draw"] += 1
-                self.game_reward = 5
+                self.game_reward = 1
         self.current_player = abs(1-self.current_player)
 
     def assess_board(self):
@@ -86,19 +84,14 @@ class Board:
             control = ""
             for position in line:
                 control += self.board[position]
-            if control == Board.PLAYER_DICT[self.current_player]*self.board_dim:
+            if control == Board.PLAYER_DICT[self.current_player]*self.board_dim and not self.game_end:
                # print("\n {} victory!".format(Board.PLAYER_DICT[self.current_player]))
                 self.game_end = True
-                if self.current_player == 1:
-                    self.game_reward = 5
-                else:
-                    self.game_reward = -1000
-
                 self.win_log[Board.PLAYER_DICT[self.current_player]] += 1
 
     def get_board_state(self):
         """Get the encoded board state for the deep Q network
-           Should return a dictionary of {index : -1/0/1}
+           Should return an array of {index : -1/0/1}
            Outputs:
                 - observation: a list of the observed positions of X's & O's.
         """

@@ -63,7 +63,8 @@ class ModelTrainer:
             reward = self.b.game_reward
             self.agent.update_replay_memory(observation, action, reward, observation_, b.game_end)
             self.agent.learn()
-            return(observation_)
+            last_move = (observation, action, reward, observation_, b.game_end)
+            return(observation_, last_move)
         else:
             # There are no free places to place on the board (draw)
             self.b.take_turn((0, 0))
@@ -79,63 +80,112 @@ class ModelTrainer:
             action = self.agent.choose_greedy_action(observation, allowed_actions)
             self.b.take_turn(action_dict[action])
             observation_ = self.b.get_board_state()
-            reward = self.b.game_reward
-            self.agent.update_replay_memory(observation, action, reward, observation_, b.game_end)
             return(observation_)
         else:
             # There are no free places to place on the board (draw)
             self.b.take_turn((0, 0))
 
-    def train_agent(self, n_games = 1):
-        """This is where the DQN would be trained
-        TODO: Would be nice to be able to go back and train the agent further at a later time.
+    def train_agent(self, n_games=1, learner_player=0):
+        """In order to work in punishment for losing, the moves must be played in pairs
+           (so that if learner's last move led to opponent victory, gets punished).
         """
+        enemy_player = abs(1-learner_player)
         for game in range(n_games):
-            self.b.initialize_board()
-            observation = self.b.get_board_state()
 
             if game % int(n_games / 10) == 0:
                 print(game)
 
+            start_player = game % 2
+            self.b.initialize_board(start_player)
+            observation = self.b.get_board_state()
+
+            # if learner isn't going first, make a random enemy move.
+            if self.b.current_player != learner_player:
+                allowed_actions = np.where(observation == 0.)[0]
+                action_init = action_dict[random.choice(allowed_actions)]
+                self.b.take_turn(action_init)
+                observation = self.b.get_board_state()
+
             while not self.b.game_end:
+                # if active player:
+                observation0 = observation.copy()
+                allowed_actions = np.where(observation0 == 0.)[0]
+                if len(allowed_actions) > 0:
+                    if len(allowed_actions) == self.b.board_dim ** 2:
+                        action = random.choice(allowed_actions)
 
-                if self.b.current_player == 0:
-                    observation = self.take_random_action(observation)
+                    else:
+                        action = self.agent.choose_action(observation0, allowed_actions)
+                    self.b.take_turn(action_dict[action])
+                    observation_ = self.b.get_board_state()
+                    end = self.b.game_end
+                    reward = self.b.game_reward
+                else:
+                    self.b.take_turn((0, 0))
 
-                elif self.b.current_player == 1:
-                    observation = self.take_learner_action(observation)
+                # if random player
+                allowed_actions = np.where(observation_ == 0.)[0]
+                if len(allowed_actions) > 0:
+                    action1 = action_dict[random.choice(allowed_actions)]
+                    self.b.take_turn(action1)
+                    observation = self.b.get_board_state()
+                else:
+                    self.b.take_turn((0, 0))
+
+                if self.b.game_end:
+                    # If learner wins:
+                    if self.b.win_log[Board.PLAYER_DICT[learner_player]] == 1:
+                        reward = +10
+                    # if opponent wins:
+                    elif self.b.win_log[Board.PLAYER_DICT[enemy_player]] == 1:
+                        reward = -30
+                    # else draw:
+                    else:
+                        reward = +5
+
+                self.agent.update_replay_memory(observation0, action, reward, observation_, end)
+                self.agent.learn()
 
             for i in ["X", "O", "draw"]:
                 self.score[i] = np.append(self.score[i], self.b.win_log[i])
 
-        #wr = np.sum(self.score["X"][-100:]) / np.sum(self.score["X"][-100:] + self.score["O"][-100:] + self.score["draw"][-100:])
-        #print("trained winrate: ", wr)
-
-
-    def test_policy(self, n_games):
+    def test_policy(self, n_games, vs="random", start_player=0., learner2=None):
         """Calculate the winrate of the trained policy against an opponent."""
         test_score = {"X":np.array([]), "O":np.array([]), "draw":np.array([])}
-        for game in range(n_games):
-            self.b.initialize_board()
-            observation = self.b.get_board_state()
+        if vs == "random":
+            policy = self.take_random_action
+            s = 1
+        elif vs == "trained":
+            policy = self.take_trained_action
+            s = -1.
+        elif vs =="learner2":
+            policy = learner2.take_trained_action
+            s = 1
 
+        for game in range(n_games):
+            self.b.initialize_board(start_player)
+            observation = self.b.get_board_state()
+            observation = self.take_random_action(observation)
             while not self.b.game_end:
 
                 if self.b.current_player == 0:
-                    observation = self.take_random_action(observation)
-                    #observation = self.take_trained_action(observation)
+
+                    observation = policy(observation*s)
 
                 elif self.b.current_player == 1:
+                    #observation = self.take_random_action(observation)
                     observation = self.take_trained_action(observation)
 
+                #b.print_board()
             for i in ["X", "O", "draw"]:
                 test_score[i] = np.append(test_score[i], self.b.win_log[i])
+
 
         norm = np.sum(test_score["X"] + test_score["O"] + test_score["draw"])
         X_wr = np.sum(test_score["X"]) / norm
         O_wr = np.sum(test_score["O"]) / norm
         dr = np.sum(test_score["draw"]) / norm
-
+        print("start_player: ", Board.PLAYER_DICT[start_player])
         print("X win rate: ", X_wr)
         print("O win rate: ", O_wr)
         print("draw_rate", dr)
@@ -155,7 +205,7 @@ class ModelTrainer:
             plt.legend()
             save_dir = pwd + r"\\plots\\noughts_crosses_results\\"
 
-            plt.title("Start player = {}; X is deep Q learner, O is random.".format(Board.PLAYER_DICT[start_player]))
+            plt.title("X is deep Q learner, O is random.")
 
             if save_plot:
                 filename = "start_player=" + Board.PLAYER_DICT[start_player] + ".png"
@@ -173,20 +223,19 @@ class ModelTrainer:
 
 if __name__ == "__main__":
 
-    start_player = 1
-    n_games = 3000
-    random.seed(2)
+    n_games = 5000
+    #random.seed(2)
 
-    b = Board(board_dim=3, start_player = start_player)
+    b = Board(board_dim=3)
 
     action_dict = {i : j for i, j in enumerate(b.board)}
     input_space = [len(action_dict)]
-    ld = [input_space, 30, len(action_dict)]
+    layer_info = [input_space, 30, len(action_dict)]
 
-    agent = Agent(gamma=0.1,
+    agent = Agent(gamma=0.2,
                   alpha=0.001,
                   batch_size=100,
-                  layer_dims=ld,
+                  layer_dims=layer_info,
                   init_sample_size=100,
                   targ_freq=100,
                   eps_end=0.01,
@@ -194,10 +243,12 @@ if __name__ == "__main__":
                   )
 
     M = ModelTrainer(agent, b)
-    M.train_agent(n_games)
+    M.train_agent(n_games, learner_player=1)
     M.plot_results(save_plot=False)
-    M.test_policy(1000)
+    M.test_policy(1000, vs = "random", start_player=0)
+    M.test_policy(1000, vs = "random", start_player=1)
 
+    #M.test_policy(1000, vs = "trained", start_player=0)
 
 
 #
