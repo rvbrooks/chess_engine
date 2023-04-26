@@ -24,7 +24,7 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
       -  ✅ Implement deep reinforcement learning for N&C.
       -  ✅ Winrate for a trained policy when going first vs a randomly acting opponent is ~98%, which is best expected.
       -  ✅ Winrate for a trained policy when going second vs a randomly acting opponent is ~82%, which is best expected.
-      -  ☐ Play 2 trained agents against each other -> expect 100% draw rate.
+      -  ✅ Implemented learning through self play against another learner.
       -  ☐ Document results and process in more detail.
 
 #### ☐ Choose a model for chess learning
