@@ -1,0 +1,7 @@
+If both players are randomly choosing moves, the first player to place has an advantage.
+In this case, the first player wins ~0.55 of games, the second wins ~0.4 of games, and ~0.1 are a draw.
+
+If the second player is learning, it can equalise (0.5 win rate) against a random opponent.
+If the first plater is learning, it can win 0.8 vs a random opponent.
+
+This is promising, but not optimal. A player going first should never lose, at worst draw. With optima play, the second player can never win.

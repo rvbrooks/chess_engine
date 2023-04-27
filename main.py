@@ -219,10 +219,10 @@ class ModelTrainer:
                 else:
                     self.b.take_turn((0, 0))
 
-                reward_dict = {"pass": {0: -1, 1: -1},
-                               "win":  {0: 0, 1: 10},
-                               "lose": {0: -50, 1: -50},
-                               "draw": {0: 50, 1: 5}}
+                reward_dict = {"pass": {0: 0, 1: 0},
+                               "win":  {0: 1, 1: 1},
+                               "lose": {0: -1, 1: -1},
+                               "draw": {0: 0, 1: 0}}
 
                 reward = reward_dict["pass"][learner_player]
                 if self.b.game_end:
