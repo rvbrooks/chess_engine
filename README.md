@@ -35,15 +35,7 @@ When training a deep learning (X's) vs a random opponent (O's), the X player cle
 - ✅ Winrate for a trained policy when going second vs a randomly acting opponent is ~82%, which is best expected.
 - ✅ Implemented learning through self play against another learner.
 
-#### ☐ Choose a model for chess learning
-##### Reinforcement Learning
- - There are many models that have been used to write chess AIs. My aim is to code a DRL model for chess, however being quite advanced it may make sense to consider other approaches firt.
- - I will build a DRL model for a simpler game like Noughts & Crosses, to better understand the deep learning approach.
- - I will train the chess model to solve reduced-complexity examples like simple endgames, as a PoC.
-
-##### Supervised Learning
- - I expect it is possible to train a supervised model on the vast database of games that have been played. I would be interesting to compare using this approach.
-
+#### ☐ Apply simple deep reinforcement model to chess
 
 ## Project Structure
 ```
