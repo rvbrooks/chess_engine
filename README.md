@@ -17,6 +17,9 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
        - ✅ The board state and board square control can be printed out for each move in the game.
        - ☐  Most win conditions are accounted for, except for resignation / offered draw / 3-fold repition and the 50 move rule.
 
+![alt text](https://github.com/rvbrooks/chess_engine/blob/main/images/chess_rules.png)
+
+
 #### ✅ Implement deep Q learning for an Noughts & Crosses.
   - Going straight to deep reinforcement learning in chess is a big jump. First I will try some reinforcement learning on a simple game. Noughts & Crosses (N&C) is extremely simple and should be easy to get working.
   - *Status*:
