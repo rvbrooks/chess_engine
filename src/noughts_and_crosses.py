@@ -155,12 +155,11 @@ class Board:
 
 if __name__ == "__main__":
     b = Board(board_dim = 3)
-    b.take_turn((0,1))
-    b.take_turn((2,2))
-    b.take_turn((1,1))
+    b.play_game()
 
-    o = b.get_board_state()
-    print(o)
+   # o = b.get_board_state()
+   # print(o)
+    b.print_board()
 
 
 # Lessons:

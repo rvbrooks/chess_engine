@@ -8,7 +8,9 @@ import random
 import time
 import copy  # we need to use deepcopy for copying custom objects with nested iterables.
 from chess_pieces import Piece, King, Queen, Rook, Bishop, Knight, Pawn
-random.seed(3) # 3005, 67436: black checkmates white; 3: white checkmates black
+import numpy as np
+
+random.seed(3)  # 3005, 67436: black checkmates white; 3: white checkmates black
 
 # 1. Get board visualisation working
 # 2. Get board updating working
@@ -19,10 +21,10 @@ file = ["a", "b", "c", "d", "e", "f", "g", "h"]
 rank = [1, 2, 3, 4, 5, 6, 7, 8]
 file_dict = {file[i]: rank[i] for i in range(len(rank))}  # letter:number
 file_dict_inv = {rank[i]: file[i] for i in range(len(rank))}  # numer:letter
-#board = [(i, j) for i in file for j in rank]
+# board = [(i, j) for i in file for j in rank]
 castle_rank = {0: 1, 1: 8}  # rank each side castles on.
 available_pieces = {"K": King, "Q": Queen, "R": Rook, "B": Bishop, "N": Knight, "P": Pawn}
-color_encoding = {0:"white", 1:"black"}
+color_encoding = {0: "white", 1: "black"}
 
 
 class ChessBoard:
@@ -54,7 +56,7 @@ class ChessBoard:
             else:
                 break
 
-    def take_turn(self):
+    def take_turn(self, action):
         """ - The current player takes a turn. The allowed moves are calculated.
             - The moves are iteratively tested in case they would put the king into
               check, in which case they are discarded.
@@ -65,31 +67,20 @@ class ChessBoard:
         else:
             self.current_player = 1
 
-        allowed_moves = self.get_all_allowed_moves(self.board, self.current_player)
+       # allowed_moves = self.get_all_allowed_moves(self.board, self.current_player)
 
-        legal = False
-        while not legal:
-            test_move = random.choice(allowed_moves)
-            print(test_move)
-            legal = self.try_update_board(test_move[0], test_move[1], self.current_player)
-            if legal is False:  # if the move was illegal, remove it from candidates
-                allowed_moves.remove(test_move)
-            if len(allowed_moves) == 0:
-                self.game_end = True
-                print("NO LEGAL MOVES")
-                print("Final board position:")
-                break
-
-        self.check_game_finished(allowed_moves)
+        #self.check_game_finished(allowed_moves)
 
         if self.game_end is False:
+           # action = random.choice(allowed_moves)
+
             # if not a pawn promotion move:
-            if len(test_move[1]) == 2:
-                self.update_board(test_move[0], test_move[1])
+            if len(action[1]) == 2:
+                self.update_board(action[0], action[1])
             # elif instead a pawn promtion move
             else:
-                end_square = (test_move[1][0], test_move[1][1])
-                self.update_board(test_move[0], end_square, test_move[1][2])
+                end_square = (action[1][0], action[1][1])
+                self.update_board(action[0], end_square, action[1][2])
 
             self.board = self.update_board_control(self.board)
 
@@ -113,14 +104,14 @@ class ChessBoard:
             for square in self.board:
                 if self.board[square]["piece"].label == "K" and self.board[square]["piece"].color == self.current_player:
                     if self.board[square]["control"] in [enemy_player, 2]:
-                        print(color_encoding[self.current_player]+" is Checkmated!")
+                        print(color_encoding[self.current_player] + " is Checkmated!")
                         self.game_end = True
                         if self.current_player == 0:
                             self.game_result = 1
                         elif self.current_player == 1:
                             self.game_result = -1
                     elif self.board[square]["control"] not in [enemy_player, 2]:
-                        print(color_encoding[self.current_player]+" is Stalemated!")
+                        print(color_encoding[self.current_player] + " is Stalemated!")
                         self.game_end = True
                         self.game_result = 0.5
                     else:
@@ -152,13 +143,13 @@ class ChessBoard:
                         self.game_result = 0.5
 
     def initialize_board(self, filename="default_board_config.txt"):
-        pwd = os.path.dirname(__file__).rsplit('\\', 1)[0]+"\\board_configs\\"
+        pwd = os.path.dirname(__file__).rsplit('\\', 1)[0] + "\\board_configs\\"
         configname = pwd + filename
         board_positions = [(i, j) for i in file for j in rank]
         self.board = {k: self.empty_square_info.copy() for k in board_positions}
         with open(configname, "r") as open_file:
             for line in open_file:
-                print(line)
+                #print(line)
                 color, piece, ff, rr = line.split(";")
                 position = (ff, int(rr))
                 self.board[position]["piece"] = available_pieces[piece](color=int(color), position=position)
@@ -170,10 +161,8 @@ class ChessBoard:
             if piece.label != "O":
                 self.active_pieces.append(piece)
 
-        self.print_board()
-        self.print_board("control")
-
-
+        #self.print_board()
+        #self.print_board("control")
 
     def update_board(self, start_square, end_square, promotion=None):
         """Once a move has been selected, update the board. Checks for special moves through
@@ -222,7 +211,6 @@ class ChessBoard:
     def try_update_board(self, start_square, end_square, current_player, promotion=None):
         """Instead of updating the main board, make a copy to evaluate - used to see
            if a move is legal (doesn't put a king in check)
-           FIXME: Need to implement the special rules in the try update!!
            """
         # move the piece
         enemy_player = abs(1 - current_player)
@@ -247,11 +235,11 @@ class ChessBoard:
 
         for square, attributes in temp_board.items():  # check if move has kept / put king in check
             if attributes["piece"].label == "K" and attributes["piece"].color == current_player:
-                if attributes["control"] in [enemy_player, 2]: # if king in check after this move
+                if attributes["control"] in [enemy_player, 2]:  # if king in check after this move
                     allowed = False
                 else:  # if king not in check after this move:
                     allowed = True
-        return (allowed)
+        return allowed
 
     def perform_castling(self, board, start_square, end_square):
         """Update the board according to special castling rules.
@@ -387,9 +375,11 @@ class ChessBoard:
 
         return (board)
 
-    def get_all_allowed_moves(self, board, current_player):
+    def get_all_allowed_moves(self,):
         """For a given player (white or black), get all the possible moves they
            could make and return as a list. """
+        board, current_player = self.board, self.current_player
+
         moves = []
         enemy_player = abs(1 - current_player)
 
@@ -454,7 +444,25 @@ class ChessBoard:
         if all(queenside):
             moves.append((("e", r), "O-O-O"))
 
-        return (moves)
+        return self.check_in_check(moves)
+
+    def check_in_check(self, moves):
+        """Need to check that a move does not result in the king being put into check
+            or staying in check (King must not be in check at the end of the move)."""
+        #print("before", len(moves))
+        allowed_moves = []
+        for move in moves:
+          #  print(move)
+            legal = self.try_update_board(move[0], move[1], self.current_player)
+           # print(legal)
+            if legal is True:  # if the move was illegal, remove it from candidates
+                #moves.remove(move)
+                allowed_moves.append(move)
+       # print("after", len(allowed_moves))
+        #print(allowed_moves)
+
+        return allowed_moves
+
 
     def print_board(self, scheme="pieces"):
         """Print out the state of the board.
@@ -509,10 +517,108 @@ class ChessBoard:
         for i in range(len(self.move_log)):
             print(i, self.move_log[i])
 
+    def encode_square(self, board_square):
+        """ For the deep learning agent, need to encode board state.
+            - Take a square of the board and encode the piece there as an integer
+            - Encode white as positive number, black as negative
+            - Encodes pieces as integers 1, 2, 3, 4, 5, 6 and empty space as 0.
+        """
+        color = {0: 1, 1: -1, None: 0}
+        piece_number = {"O": 0, "P": 1, "N": 2, "B": 3, "R": 4, "Q": 5, "K": 6}
+        return color[board_square.color] * piece_number[board_square.label]
+
+    def get_board_state(self):
+        """This will need to loop over the board square by square, and in each square encode
+            the piece that's there into a list.
+
+            Return:
+                numpy array of the encoded board state. This is a 64-long array with the
+                pieces encoded as integers (+ve for white, -ve for black)
+                This will be the input observation layer to the deep Q network.
+                """
+        board_state = np.zeros(64)
+        i = 0
+        for letter in file:
+            for number in rank:
+                # board_state[i] = self.board[letter, number]
+                encoding = self.encode_square(self.board[letter, number]["piece"])
+                #print(self.board[letter, number]["piece"], self.board[letter, number]["piece"].color)
+                board_state[i] = encoding
+                i += 1
+        return board_state
+
+    def get_action_space(self):
+        """for the DQN we need to determine the total action space of moves that can
+            be made. This is the union of queen moves & knight moves, plus special promotions and castling. """
+        #self.print_board()
+        action_size = 0
+        action_dict = {}
+        i = 0
+        for letter in file:
+            for number in rank:
+                position = (letter, number)
+
+                self.initialize_board("empty_board.txt")
+                Q = available_pieces["Q"](color=int(0), position=position)
+                self.board[position]["piece"] = Q
+                moves = Q.get_possible_moves(self.board, 0)[0]
+                for move in moves:
+                    action_dict[i] = (position, move)
+                    i+=1
+                action_size += len(moves)
+
+                self.initialize_board("empty_board.txt")
+                N = available_pieces["N"](color=int(0), position=position)
+                self.board[position]["piece"] = N
+                moves = N.get_possible_moves(self.board, 0)[0]
+                for move in moves:
+                    action_dict[i] = (position, move)
+                    i += 1
+                action_size += len(moves)
+
+        # plus 8 promotions + 7 sideways captures each way times 4-1 possible promotions times 2 colors
+        action_size += (8+7+7)*(4-1)*2
+
+        # pawn promotion
+        promotions = ["Q", "R", "B", "N"]
+        for p in promotions:
+            for fl in file:
+                action_dict[i] = ((fl, 7), (fl, 8), p)
+                i += 1
+                action_dict[i] = ((fl, 2), (fl, 1), p)
+                i += 1
+
+            for fl in [1,2,3,4,5,6,7]:
+                fl = file_dict_inv[fl+1]
+                action_dict[i] = ((fl, 7), (fl, 8), p)
+                i += 1
+                action_dict[i] = ((fl, 2), (fl, 1), p)
+                i += 1
+
+            for fl in [2,3,4,5,6,7,8]:
+                fl = file_dict_inv[fl-1]
+                action_dict[i] = ((fl, 7), (fl, 8), p)
+                i += 1
+                action_dict[i] = ((fl, 2), (fl, 1), p)
+                i += 1
+
+        # castling
+        castle_list = [(("e", 1), "O-O"), (("e", 1), "O-O-O"), (("e", 8), "O-O"),(("e", 8), "O-O-O")]
+        for c in castle_list:
+            action_dict[i] = c
+            i += 1
+
+        return action_dict
+
 
 if __name__ == "__main__":
     cb = ChessBoard()
     cb.perspective = 0
 
-    cb.play_game(500, perspective=0, wait=0)
+  #  cb.play_game(1000, perspective=0, wait=0)
+
+  #  print(cb.get_board_state())
+    cb.get_action_space()
+
+
 

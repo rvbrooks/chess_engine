@@ -149,16 +149,17 @@ class ModelTrainer:
                 else:
                     self.b.take_turn((0, 0))
 
+                reward = 0
                 if self.b.game_end:
                     # If learner wins:
                     if self.b.win_log[Board.PLAYER_DICT[learner_player]] == 1:
-                        reward = +0.2
+                        reward = 1
                     # if opponent wins:
                     elif self.b.win_log[Board.PLAYER_DICT[enemy_player]] == 1:
-                        reward = -0.6
+                        reward = -5
                     # else draw:
                     else:
-                        reward = +0.2
+                        reward = 0
 
                 self.agent.update_replay_memory(observation0, action, reward, observation_, end)
                 self.agent.learn()
@@ -317,7 +318,7 @@ class ModelTrainer:
 
 
 if __name__ == "__main__":
-    n_games = 3000
+    n_games = 10000
     # random.seed(2)
 
     b = Board(board_dim=3)
@@ -337,8 +338,8 @@ if __name__ == "__main__":
                   )
 
     M = ModelTrainer(agent, b)
-    # M.train_agent(n_games, learner_player=1)
-    M.train_2agents(n_games, learner_player=1)
+    M.train_agent(n_games, learner_player=1)
+    #M.train_2agents(n_games, learner_player=1)
 
     M.plot_learning(save_plot=False)
     M.test_policy(1000, vs="random", start_player=0)

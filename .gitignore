@@ -3,3 +3,6 @@ literature/
 
 # moirai code
 moirai_code/
+
+# inkscape drawings
+*.svg
