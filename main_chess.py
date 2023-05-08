@@ -13,6 +13,7 @@ import sys
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'  # necessary to install in import error with matplotlib and pytorch
 
@@ -30,7 +31,7 @@ class ModelTrainer:
     def __init__(self, agent, environment):
         self.agent = agent
         self.b = environment
-        self.score = {"X": np.array([]), "O": np.array([]), "draw": np.array([])}
+        self.score = {"white": np.array([]), "black": np.array([]), "draw": np.array([])}
         # self.X_wins, self.O_wins, self.draws = np.array([]), np.array([]), np.array([])
 
     def take_random_action(self, observation):
@@ -105,10 +106,10 @@ class ModelTrainer:
            Agent trained against random opponenent
         """
         enemy_player = abs(1 - learner_player)
-        for game in range(n_games):
-
-            if game % int(n_games / 10) == 0:
-                print(game)
+        for game in (range(n_games)):
+            print(game)
+            #if game % int(n_games / 10) == 0:
+              #  print(game)
 
             start_player = game % 2
             self.b.initialize_board()
@@ -120,40 +121,44 @@ class ModelTrainer:
                 allowed_actions = b.get_all_allowed_moves()
                 # this gets the allowed actions as tuples
                 # we need to convert them to their indices in the action space.
-                allowed_indices = [allowed_actions.get()]
+                allowed_indices = [action_dict_inv[move] for move in allowed_actions]
                 if len(allowed_actions) > 0:
-                    action = self.agent.choose_action(observation0, allowed_actions)
+                    b.check_game_finished(allowed_actions)
+                    action = self.agent.choose_action(observation0, allowed_indices)
                     self.b.take_turn(action_dict[action])
                     observation_ = self.b.get_board_state()
                     end = self.b.game_end
                 else:
-                    print("learner out of moves")
+                    b.check_game_finished(allowed_actions)
+                    #print("learner out of moves")
 
                 # random player's (black's) turn
                 allowed_actions = b.get_all_allowed_moves()
                 if len(allowed_actions) > 0:
-                    action1 = action_dict[random.choice(allowed_actions)]
-                    self.b.take_turn(action1)
+                    b.check_game_finished(allowed_actions)
+                    action1 = action_dict_inv[random.choice(allowed_actions)]
+                    self.b.take_turn(action_dict[action1])
                     observation = self.b.get_board_state()
                 else:
-                    print("random out of moves")
+                    b.check_game_finished(allowed_actions)
+                   # print("random out of moves")
 
                 reward = 0
                 if self.b.game_end:
                     # If learner wins:
-                    if self.b.win_log[Board.PLAYER_DICT[learner_player]] == 1:
+                    if self.b.win_log["white"] == 1:
                         reward = 1
                     # if opponent wins:
-                    elif self.b.win_log[Board.PLAYER_DICT[enemy_player]] == 1:
-                        reward = -5
+                    elif self.b.win_log["black"] == 1:
+                        reward = -1
                     # else draw:
                     else:
-                        reward = 0
+                        reward = -1
 
                 self.agent.update_replay_memory(observation0, action, reward, observation_, end)
                 self.agent.learn()
 
-            for i in ["X", "O", "draw"]:
+            for i in ["white", "black", "draw"]:
                 self.score[i] = np.append(self.score[i], self.b.win_log[i])
 
 
@@ -202,11 +207,11 @@ class ModelTrainer:
     def plot_learning(self, save_plot=False):
         "Plot training results / test results"
 
-        n = list(range(len(self.score["X"])))
-        norm = np.cumsum(self.score["X"] + self.score["O"] + self.score["draw"])
+        n = list(range(len(self.score["white"])))
+        norm = np.cumsum(self.score["white"] + self.score["black"] + self.score["draw"])
         with plt.style.context("rose_pine.mplstyle"):
-            plt.plot(n, np.cumsum(self.score["X"]) / norm, marker='o', label="X win")
-            plt.plot(n, np.cumsum(self.score["O"]) / norm, marker='o', label="O win")
+            plt.plot(n, np.cumsum(self.score["white"]) / norm, marker='o', label="white win")
+            plt.plot(n, np.cumsum(self.score["black"]) / norm, marker='o', label="black win")
             plt.plot(n, np.cumsum(self.score["draw"]) / norm, marker='o', label="draws")
 
             plt.xlabel("n games")
@@ -232,18 +237,20 @@ class ModelTrainer:
 
 
 if __name__ == "__main__":
-    n_games = 10000
+    n_games = 150
     # random.seed(2)
 
     b = ChessBoard()
 
     # need to properly define the action space / dict of all possible actions.
-    action_dict = b.get_action_space()
 
+    action_dict = b.get_action_space()
+    action_dict_inv = {value : key for key, value in action_dict.items()}
 
 
     input_space = [64] # 64 squares, each can be encoded -6 to +6 depending on piece and color
     layer_info = [input_space, 30, len(action_dict)]
+
 
     agent = Agent(gamma=0.2,
                   alpha=0.001,
@@ -259,7 +266,7 @@ if __name__ == "__main__":
     M.train_agent(n_games, learner_player=1)
 
     M.plot_learning(save_plot=False)
-    M.test_policy(1000, vs="random", start_player=0)
+    #M.test_policy(1000, vs="random", start_player=0)
 
 
 # M.test_policy(1000, vs = "trained", start_player=0)

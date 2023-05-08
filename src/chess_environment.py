@@ -39,7 +39,7 @@ class ChessBoard:
         self.current_player = 0
         self.game_end = False  # flag if game has finished.
         self.move_log = {}  # record of all moves played.
-        self.game_result = None  # the result of the game (1: white win, 0.5, draw, -1 black win)
+        self.win_log = {"white":0,"black":0,"draw":0}
 
     def play_game(self, n_turns=5, perspective=0, wait=0.5):
         # TODO: make this a while loop until game finished.
@@ -84,8 +84,8 @@ class ChessBoard:
 
             self.board = self.update_board_control(self.board)
 
-        self.print_board()
-        self.print_board("control")
+        #self.print_board()
+        #self.print_board("control")
 
     def check_game_finished(self, allowed_moves):
         """
@@ -97,37 +97,37 @@ class ChessBoard:
         TODO: implement draw by repetition and by 50 moves no captures.
         """
         # stalemate by 2 kings
-
+        message = None
         # Check for checkmate and stalemate.
         if len(allowed_moves) == 0:
             enemy_player = abs(1 - self.current_player)
             for square in self.board:
                 if self.board[square]["piece"].label == "K" and self.board[square]["piece"].color == self.current_player:
                     if self.board[square]["control"] in [enemy_player, 2]:
-                        print(color_encoding[self.current_player] + " is Checkmated!")
+                        message = color_encoding[self.current_player] + " is Checkmated!"
                         self.game_end = True
                         if self.current_player == 0:
-                            self.game_result = 1
+                            self.win_log["white"]+=1
                         elif self.current_player == 1:
-                            self.game_result = -1
+                            self.win_log["black"] +=1
                     elif self.board[square]["control"] not in [enemy_player, 2]:
-                        print(color_encoding[self.current_player] + " is Stalemated!")
+                        message = color_encoding[self.current_player] + " is Stalemated!"
                         self.game_end = True
-                        self.game_result = 0.5
+                        self.win_log["draw"] +=1
                     else:
-                        print("Something's wrong...")
+                        message = "something's wrong..."
 
         elif len(self.graveyard) == 30:
-            print("stalemate by 2 kings left")
+            message = "stalemate by 2 kings left"
             self.game_end = True
-            self.game_result = 0.5
+            self.win_log["draw"] +=1
 
         elif len(self.graveyard) == 29:
             for piece in self.active_pieces:
                 if piece.label in ["B", "N"]:
-                    print("stalemate by 2 kings & bishop/knight left")
+                    message = "stalemate by 2 kings & bishop/knight left"
                     self.game_end = True
-                    self.game_result = 0.5
+                    self.win_log["draw"] += 1
 
         elif len(self.graveyard) == 28:
             w, b = [], []
@@ -138,9 +138,12 @@ class ChessBoard:
                     b.append(piece.label)
                 if len(w) == len(b):
                     if "Q" not in [w, b] and "R" not in [w, b]:
-                        print("stalemate by 2 kings & bishop/knight each left")
+                        message = "stalemate by 2 kings & bishop/knight each left"
                         self.game_end = True
-                        self.game_result = 0.5
+                        self.win_log["draw"] +=1
+
+        if message:
+            print(message)
 
     def initialize_board(self, filename="default_board_config.txt"):
         pwd = os.path.dirname(__file__).rsplit('\\', 1)[0] + "\\board_configs\\"
@@ -153,8 +156,11 @@ class ChessBoard:
                 color, piece, ff, rr = line.split(";")
                 position = (ff, int(rr))
                 self.board[position]["piece"] = available_pieces[piece](color=int(color), position=position)
-
+        self.game_end = False
+        self.win_log = {"white": 0, "black": 0, "draw": 0}
         self.board = self.update_board_control(self.board)
+        self.graveyard = []
+        self.move_log = {}
 
         for square in self.board:
             piece = self.board[square]["piece"]
@@ -239,6 +245,9 @@ class ChessBoard:
                     allowed = False
                 else:  # if king not in check after this move:
                     allowed = True
+            else:
+                print("no king...?")
+                allowed = False
         return allowed
 
     def perform_castling(self, board, start_square, end_square):
@@ -329,7 +338,6 @@ class ChessBoard:
         P = available_pieces[promotion]
 
         new_piece = P(color=self.current_player, position=end_square)
-        print(new_piece)
 
         board[end_square]["piece"] = new_piece
         return (board)
@@ -444,7 +452,8 @@ class ChessBoard:
         if all(queenside):
             moves.append((("e", r), "O-O-O"))
 
-        return self.check_in_check(moves)
+        allowed_moves = self.check_in_check(moves)
+        return(allowed_moves)
 
     def check_in_check(self, moves):
         """Need to check that a move does not result in the king being put into check
@@ -536,7 +545,7 @@ class ChessBoard:
                 pieces encoded as integers (+ve for white, -ve for black)
                 This will be the input observation layer to the deep Q network.
                 """
-        board_state = np.zeros(64)
+        board_state = np.zeros(64, dtype=np.float32)
         i = 0
         for letter in file:
             for number in rank:
@@ -549,7 +558,8 @@ class ChessBoard:
 
     def get_action_space(self):
         """for the DQN we need to determine the total action space of moves that can
-            be made. This is the union of queen moves & knight moves, plus special promotions and castling. """
+            be made. This is the union of queen moves & knight moves, plus special promotions and castling.
+            TODO: tidy this method up"""
         #self.print_board()
         action_size = 0
         action_dict = {}
@@ -582,24 +592,29 @@ class ChessBoard:
         # pawn promotion
         promotions = ["Q", "R", "B", "N"]
         for p in promotions:
-            for fl in file:
-                action_dict[i] = ((fl, 7), (fl, 8), p)
+            for fl in [1,2,3,4,5,6,7,8]:
+                fl = file_dict_inv[fl]
+                action_dict[i] = ((fl, 7), (fl, 8, p))
                 i += 1
-                action_dict[i] = ((fl, 2), (fl, 1), p)
+                action_dict[i] = ((fl, 2), (fl, 1, p))
                 i += 1
 
             for fl in [1,2,3,4,5,6,7]:
-                fl = file_dict_inv[fl+1]
-                action_dict[i] = ((fl, 7), (fl, 8), p)
+                fl2 = file_dict_inv[fl + 1]
+                fl = file_dict_inv[fl]
+
+                action_dict[i] = ((fl, 7), (fl2, 8, p))
                 i += 1
-                action_dict[i] = ((fl, 2), (fl, 1), p)
+                action_dict[i] = ((fl, 2), (fl2, 1, p))
                 i += 1
 
             for fl in [2,3,4,5,6,7,8]:
-                fl = file_dict_inv[fl-1]
-                action_dict[i] = ((fl, 7), (fl, 8), p)
+                fl2 = file_dict_inv[fl-1]
+                fl = file_dict_inv[fl]
+                action_dict[i] = ((fl, 7), (fl2, 8, p))
+
                 i += 1
-                action_dict[i] = ((fl, 2), (fl, 1), p)
+                action_dict[i] = ((fl, 2), (fl2, 1, p))
                 i += 1
 
         # castling
