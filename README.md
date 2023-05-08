@@ -11,17 +11,18 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
 ## Roadmap
 
 #### ✅ Define the rules of chess
-  - For personal interest, I coded up the rules of chess rather than using an existing Python library.
-  - *Status*: 
-       - ✅ The computer can play a completely random game against itself, with support for the special move cases of castling, en-passant and pawn promotion
-       - ✅ The board state and board square control can be printed out for each move in the game.
-       - ☐  Most win conditions are accounted for, except for resignation / offered draw / 3-fold repition and the 50 move rule.
+I coded up an object-oriented chess environment. The ChessBoard object can print out the current state of the board. Check out this image showing a game the computer played against itself - White eventually won after ~50 moves, checkmating Black!
 
 ![alt text](https://github.com/rvbrooks/chess_engine/blob/main/images/chess_rules.png)
 
+  - *Status*: 
+       - ✅ The computer can play a completely random game against itself, with support for the special move cases of castling, en-passant and pawn promotion
+       - ✅ The board state and board square control can be printed out for each move in the game.
 
 #### ✅ Implement deep Q learning for an Noughts & Crosses.
-  - Going straight to deep reinforcement learning in chess is a big jump. First I will try some reinforcement learning on a simple game. Noughts & Crosses (N&C) is extremely simple and should be easy to get working.
+Since chess is quite a complex game, I first implemented deep reinforcement learning for noughts & crosses (tic-tac-toe for Americans).
+![alt text](https://github.com/rvbrooks/chess_engine/blob/main/images/nc_learning.png)
+
   - *Status*:
       -  ✅ Coded up the rules of Noughts & Crosses.
       -  ✅ Implement deep reinforcement learning for N&C.
