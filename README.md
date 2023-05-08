@@ -11,7 +11,7 @@ In this ongoing project, I'm aiming to apply similar deep reinforcement learning
 ## Roadmap
 
 #### ✅ Define the rules of chess
-I coded up an object-oriented chess environment. The ChessBoard object can print out the current state of the board. Check out this image showing a game the computer played against itself - White eventually won after ~50 moves, checkmating Black!
+I coded up an object-oriented chess environment. The ChessBoard object can print out the current state of the board. Check out this image showing a game the computer played against itself - White eventually won after ~50 moves, checkmating Black! Note I'm using the chess notations of e.g. K for King, Q for Queen, etc..
 
 ![alt text](https://github.com/rvbrooks/chess_engine/blob/main/images/chess_rules.png)
 
@@ -20,16 +20,14 @@ I coded up an object-oriented chess environment. The ChessBoard object can print
        - ✅ The board state and board square control can be printed out for each move in the game.
 
 #### ✅ Implement deep Q learning for an Noughts & Crosses.
-Since chess is quite a complex game, I first implemented deep reinforcement learning for noughts & crosses (tic-tac-toe for Americans).
+Since chess is quite a complex game, I first implemented deep reinforcement learning for noughts (O) & crosses (X) (tic-tac-toe for Americans).
+
+When training a deep learning (X's) vs a random opponent (O's), the X player clearly starts to beat the random O player every time after several 1000 epochs of training. In fact, the deep learner wins >99% of games versus the random player, when placing first.
 ![alt text](https://github.com/rvbrooks/chess_engine/blob/main/images/nc_learning.png)
 
-  - *Status*:
-      -  ✅ Coded up the rules of Noughts & Crosses.
-      -  ✅ Implement deep reinforcement learning for N&C.
-      -  ✅ Winrate for a trained policy when going first vs a randomly acting opponent is ~98%, which is best expected.
-      -  ✅ Winrate for a trained policy when going second vs a randomly acting opponent is ~82%, which is best expected.
-      -  ✅ Implemented learning through self play against another learner.
-      -  ☐ Document results and process in more detail.
+✅ Winrate for a trained policy when going first vs a randomly acting opponent is ~99%, which is best expected.
+✅ Winrate for a trained policy when going second vs a randomly acting opponent is ~82%, which is best expected.
+✅ Implemented learning through self play against another learner.
 
 #### ☐ Choose a model for chess learning
 ##### Reinforcement Learning
